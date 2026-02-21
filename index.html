@@ -405,8 +405,18 @@ function selectOS(os) {
                     });
 
                     if (response.ok) {
+                        // Aplica o efeito visual de "concluído" no card
                         card.classList.add('opacity-40', 'grayscale', 'pointer-events-none');
-                        btn.innerText = 'ENCAMINHADO';
+                        
+                        // Formata o nome do setor para exibição (Ex: SOLDA -> SOLDA)
+                        const sectorLabel = targetSector.toUpperCase();
+                        
+                        // Atualiza o texto do botão específico que foi clicado
+                        btn.innerHTML = `<i class="fa-solid fa-check-double mr-1"></i> ENCAMINHADO (${sectorLabel})`;
+                        
+                        // Garante que o botão tenha um estilo de destaque mesmo em cinza
+                        btn.classList.remove('bg-slate-50', 'text-slate-600');
+                        btn.classList.add('bg-turbo-teal', 'text-white');
                     } else {
                         alert("Erro ao encaminhar peça.");
                         btn.disabled = false;
