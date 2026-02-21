@@ -361,51 +361,81 @@ function selectOS(os) {
         function openSpecialServiceModal() { document.getElementById('modal-special').classList.remove('hidden'); }
         function closeSpecialServiceModal() { document.getElementById('modal-special').classList.add('hidden'); }
 		
-		async function sendPieceTo(btn, componentName, targetSector) {
+		// Novas funções para controlar o modal customizado
+        function closeRoutingModal() {
+            document.getElementById('modal-confirm-routing').classList.add('hidden');
+        }
+
+        async function sendPieceTo(btn, componentName, targetSector) {
             if (!selectedOS) return;
 
-            const card = document.getElementById(`comp-card-${componentName}`);
-            const checkboxes = card.querySelectorAll('input[type="checkbox"]:checked');
-            const services = Array.from(checkboxes).map(cb => cb.dataset.item);
+            // Mostra o modal customizado em vez do confirm do navegador
+            const modal = document.getElementById('modal-confirm-routing');
+            const msg = document.getElementById('routing-confirm-msg');
+            const confirmBtn = document.getElementById('btn-confirm-routing-final');
+            
+            modal.classList.remove('hidden');
+            msg.innerText = `Confirmar o envio de ${componentName} para o setor de ${targetSector}?`;
 
-            // Pergunta de confirmação
-            if (!confirm(`Confirmar envio de ${componentName} para ${targetSector}?`)) return;
+            // Configura o botão de confirmação dentro do modal
+            confirmBtn.onclick = async () => {
+                modal.classList.add('hidden');
+                
+                const card = document.getElementById(`comp-card-${componentName}`);
+                const checkboxes = card.querySelectorAll('input[type="checkbox"]:checked');
+                const services = Array.from(checkboxes).map(cb => cb.dataset.item);
 
-            btn.disabled = true;
-            const originalText = btn.innerText;
-            btn.innerText = 'ENVIANDO...';
+                btn.disabled = true;
+                const originalText = btn.innerText;
+                btn.innerText = 'ENVIANDO...';
 
-            const payload = {
-                os_id: selectedOS.id,
-                action: "PIECE_ROUTING",
-                component: componentName,
-                target: targetSector,
-                executed_services: services
-            };
+                const payload = {
+                    os_id: selectedOS.id,
+                    action: "PIECE_ROUTING",
+                    component: componentName,
+                    target: targetSector,
+                    executed_services: services
+                };
 
-            try {
-                const response = await fetch(API_ACTION, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+                try {
+                    const response = await fetch(API_ACTION, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
 
-                if (response.ok) {
-                    // Efeito Cinza (Inativo) igual ao seu vídeo
-                    card.classList.add('opacity-40', 'grayscale', 'pointer-events-none');
-                    btn.innerText = 'ENCAMINHADO';
-                } else {
-                    alert("Erro ao encaminhar peça.");
+                    if (response.ok) {
+                        card.classList.add('opacity-40', 'grayscale', 'pointer-events-none');
+                        btn.innerText = 'ENCAMINHADO';
+                    } else {
+                        alert("Erro ao encaminhar peça.");
+                        btn.disabled = false;
+                        btn.innerText = originalText;
+                    }
+                } catch (error) {
+                    console.error(error);
+                    alert("Falha na conexão.");
                     btn.disabled = false;
                     btn.innerText = originalText;
                 }
-            } catch (error) {
-                console.error(error);
-                alert("Falha na conexão.");
-                btn.disabled = false;
-                btn.innerText = originalText;
-            }
+            };
         }
     </script>
+	
+	<!-- MODAL DE CONFIRMAÇÃO DE ROTEAMENTO (CUSTOM) -->
+    <div id="modal-confirm-routing" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl text-center border-t-8 border-turbo-teal">
+            <div class="w-20 h-20 bg-teal-50 text-turbo-teal rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fa-solid fa-paper-plane text-3xl"></i>
+            </div>
+            <h4 class="text-xl font-black text-slate-800 mb-2 uppercase italic">Encaminhar Peça?</h4>
+            <p id="routing-confirm-msg" class="text-slate-500 text-sm mb-6 font-medium">Você está prestes a enviar este item para outro setor. Esta ação é definitiva.</p>
+            <div class="flex gap-3">
+                <button onclick="closeRoutingModal()" class="flex-1 bg-slate-100 text-slate-600 font-bold py-3 rounded-xl hover:bg-slate-200 transition uppercase text-xs tracking-widest">Cancelar</button>
+                <button id="btn-confirm-routing-final" class="flex-1 bg-turbo-teal text-white font-bold py-3 rounded-xl hover:bg-teal-700 transition shadow-lg shadow-teal-100 uppercase text-xs tracking-widest">Sim, Enviar</button>
+            </div>
+        </div>
+    </div>
+	
 </body>
 </html>
