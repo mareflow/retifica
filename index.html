@@ -221,19 +221,24 @@
 
         function selectOS(os) {
             selectedOS = os;
+            
+            // 1. Atualiza o visual da fila (seleção azul no card)
             renderQueue();
             
-            // UI Toggle
+            // 2. Troca as telas (esconde o aviso de "selecione" e mostra o trabalho)
             document.getElementById('empty-state').classList.add('hidden');
             document.getElementById('workspace-header').classList.remove('hidden');
             document.getElementById('components-grid').classList.remove('hidden');
-            document.getElementById('footer-actions').classList.remove('hidden');
 
-            // Header Update
+            // 3. CARREGA OS DADOS REAIS NO PAINEL AZUL
             document.getElementById('current-os-id').innerText = os.business_id;
             document.getElementById('current-os-desc').innerText = `${os.model} | ${os.client}`;
 
+            // 4. Desenha os cards de componentes (CCE, CCO, etc)
             renderComponentCards();
+            
+            // 5. Scroll para o topo para garantir que o usuário veja o início do processo
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function renderComponentCards() {
