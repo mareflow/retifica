@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setor Retífica | TurboSul - Controle de Produção</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .bg-turbo-teal { background-color: #0D9488; }
+        .text-turbo-teal { color: #0D9488; }
+        .border-turbo-teal { border-color: #0D9488; }
+        .bg-turbo-blue { background-color: #2563EB; }
+        .bg-turbo-orange { background-color: #EA580C; }
+        
+        /* Custom Scrollbar para os checklists */
+        .checklist-scroll::-webkit-scrollbar { width: 5px; }
+        .checklist-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
+        .checklist-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        .active-routing {
+            background-color: #0D9488 !important;
+            color: white !important;
+        }
+
+        .os-card-selected {
+            border-left: 4px solid #2563EB;
+            background-color: #f8fafc;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen">
+
+    <!-- HEADER -->
+    <header class="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between sticky top-0 z-50 shadow-sm">
+        <div class="flex items-center space-x-4">
+            <img src="https://i.postimg.cc/Jh5Jvrc9/IMG-7901.png" alt="TurboSul Logo" class="h-10">
+            <div>
+                <h1 class="text-lg font-bold tracking-tight text-slate-900 uppercase">TurboSul - Controle de Produção</h1>
+                <p class="text-xs text-slate-500 font-medium italic">Sistema de Gerenciamento de Ordens</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-6">
+            <button class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-semibold transition">
+                Quadro de Produção
+            </button>
+            <div class="flex items-center space-x-3 border-l pl-6 border-slate-200">
+                <div class="text-right">
+                    <p class="text-sm font-bold leading-none">Administrador</p>
+                    <p class="text-[10px] text-turbo-teal font-bold uppercase tracking-wider">Setor Retífica</p>
+                </div>
+                <button class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition">Sair</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex h-[calc(100vh-64px)] overflow-hidden">
+        
+        <!-- SIDEBAR (FILA DE OS) -->
+        <aside class="w-80 bg-white border-r border-slate-200 overflow-y-auto flex-shrink-0">
+            <div class="p-4 border-b border-slate-100 bg-slate-50 sticky top-0 z-10">
+                <h2 class="text-xs font-black uppercase tracking-widest text-slate-400">Ordens na Fila</h2>
+            </div>
+            <div id="os-queue-container" class="divide-y divide-slate-100">
+                <!-- Cards renderizados via JS -->
+                <div class="p-8 text-center text-slate-400 animate-pulse italic">Carregando fila...</div>
+            </div>
+        </aside>
+
+        <!-- WORKSPACE CENTRAL -->
+        <main class="flex-1 overflow-y-auto p-6 bg-slate-50">
+            
+            <!-- HEADER DO PROCESSO -->
+            <div id="workspace-header" class="hidden flex flex-col lg:flex-row justify-between gap-4 mb-6">
+                <div class="bg-turbo-blue text-white rounded-xl p-5 shadow-lg flex-1 relative overflow-hidden">
+                    <div class="relative z-10">
+                        <h2 id="current-os-id" class="text-3xl font-black italic">OS-3001</h2>
+                        <p id="current-os-desc" class="text-sm font-medium opacity-90 uppercase tracking-widest">CARREGANDO DADOS...</p>
+                    </div>
+                    <div class="absolute right-[-20px] top-[-20px] opacity-10">
+                        <i class="fa-solid fa-gears text-8xl"></i>
+                    </div>
+                    <div class="mt-4 flex space-x-3 relative z-10">
+                        <button onclick="openSpecialServiceModal()" class="bg-white/20 hover:bg-white/30 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg uppercase tracking-wider transition">
+                            + Adicionar Serviço Especial
+                        </button>
+                        <button class="bg-white/20 hover:bg-white/30 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg uppercase tracking-wider transition">
+                            Histórico OS
+                        </button>
+                    </div>
+                </div>
+
+                <!-- MONITOR DE PRODUTIVIDADE -->
+                <div class="bg-slate-900 text-white rounded-xl p-4 flex flex-col justify-between border-b-4 border-turbo-teal lg:w-72 shadow-xl">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-turbo-teal rounded-lg"><i class="fa-solid fa-clock"></i></div>
+                        <div>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Monitor de Produtividade</p>
+                            <p class="text-xs font-black text-white uppercase">Setor em Produção Ativa</p>
+                        </div>
+                    </div>
+                    <button class="mt-3 w-full bg-turbo-teal hover:bg-teal-600 text-white py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition shadow-md shadow-teal-900">
+                        Iniciar Limpeza Setor
+                    </button>
+                </div>
+            </div>
+
+            <!-- GRID DE COMPONENTES -->
+            <div id="empty-state" class="flex flex-col items-center justify-center h-full text-slate-400">
+                <i class="fa-solid fa-hand-pointer text-5xl mb-4"></i>
+                <p class="text-lg font-bold">Selecione uma Ordem de Serviço para iniciar os trabalhos.</p>
+            </div>
+
+            <div id="components-grid" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-24">
+                <!-- Cards renderizados via JS -->
+            </div>
+        </main>
+    </div>
+
+    <!-- BOTÃO FIXO FINAL -->
+    <div id="footer-actions" class="fixed bottom-0 right-0 p-6 z-40 hidden">
+        <button onclick="releaseOS()" class="bg-turbo-orange hover:bg-orange-700 text-white px-10 py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-sm shadow-2xl transition-all transform hover:-translate-y-1 active:translate-y-0 shadow-orange-900/40">
+            Concluir Limpeza e Liberar OS
+        </button>
+    </div>
+
+    <!-- MODAL SERVIÇO ESPECIAL (Placeholder Visual) -->
+    <div id="modal-special" class="fixed inset-0 bg-slate-900/80 z-[100] flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 class="font-black text-slate-800 uppercase italic tracking-tight">Adicionar Serviço Especial</h3>
+                <button onclick="closeSpecialServiceModal()" class="text-slate-400 hover:text-slate-600 transition"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase mb-2">Nome do Item / Processo</label>
+                    <input type="text" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 outline-none border-2 border-transparent focus:border-turbo-teal font-bold transition">
+                </div>
+                <div class="flex space-x-3">
+                    <button class="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold hover:bg-slate-200 transition">Cancelar</button>
+                    <button class="flex-1 bg-turbo-blue text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-200 transition">Adicionar Item</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JS LOGIC -->
+    <script>
+        const API_QUEUE = 'https://webhook.mareflow.com.br/webhook/production/rectification-queue';
+        const API_ACTION = 'https://webhook.mareflow.com.br/webhook/production/rectification-action';
+        
+        let selectedOS = null;
+        let queueData = [];
+
+        // Estrutura de dados dos componentes
+        const COMPONENT_STRUCTURE = {
+            CCE: ["ANÁLISE", "USINAR BORDA QUENTE", "USINAR BORDA FRIA", "LIXAR", "CONCENT.", "COLO MANCAL", "EMBUCHAR", "CANAL VITON", "STEPBOARD", "ADAPTAÇÃO", "ROSCAS", "TRANSFORMAÇÃO ROSCAS", "ROSCAS POSTIÇAS", "FRESAMENTO"],
+            CCO: ["ANÁLISE", "ROSCAS", "ROSCAS POSTIÇAS", "EMBUCHAMENTO", "SOB MEDIDA", "ABERTURA DE TRINCAS", "RETIRAR PARAFUSOS", "ADAPTAÇÃO ENCAIXE PRATO", "ADAPTAÇÃO BOCAL ADMISSÃO", "ADAPTAÇÃO BOCAL FILTRO"],
+            CT: ["FACEAMENTO PÉ/ MESA", "FACEAMENTO SAÍDA", "REMOVER WASTEGATES", "MONTAR WASTEGATE", "FRESAMENTO DA MOEDA", "ACENTAMENTO DA CCE", "ADAPTAÇÃO DE BORDA", "EMBUCHAMENTO SAÍDA"],
+            EIXO: ["ANÁLISE", "DESEMPENO", "ABERTURA CAVA", "USINAGEM", "ABERTURA ANEL", "RETIFICA", "ROSCA EIXO", "FACEAMENTO", "FURO CENTRO", "TRANSFORMAR", "POLIMENTO EIXO"],
+            ROTOR: ["ANÁLISE", "FACEAMENTO / PORCA", "TRANSFORMAÇÃO", "EMBUCHAMENTO ROTOR", "FACEAMENTO DE PALHETAS"],
+            COLETOR: ["ROSCAS", "ROSCAS POSTIÇAS", "FRESAMENTO", "ABERTURA DE TRINCAS", "FRESAMENTO DE COLETOR - FACE 1", "FRESAMENTO DE COLETOR - FACE 2", "FRESAMENTO FACE EGR"],
+            REPAROS: ["FABRICAÇÃO MANCAL R.", "FABRICAÇÃO MANCAL A.", "PASSE EXTERNO M. RADIAL", "PASSE INTERNO M. RADIAL", "FACEAMENTO M. RADIAL", "PASSE NA FLANGE", "ADAPTAÇÃO DE FLANGE", "SOLDA PROT. TÉRMICO", "PRODUZIR PROT. TÉRMICO", "FABRICAÇÃO ESPAÇADOR R.", "FABRICAÇÃO COLAR", "CALÇO DE ALTURA"],
+            GEOMETRIA: ["SERVIÇO GERAL RETÍFICA", "DESMONTAGEM/LIMPEZA", "CONFERÊNCIA"],
+            ATUADOR: ["SERVIÇO GERAL RETÍFICA", "TESTE ELETRÔNICO", "TROCA DE ENGRENAGENS"],
+            ANEXOS: ["SERVIÇO GERAL RETÍFICA", "REVISÃO DE ACESSÓRIOS"]
+        };
+
+        // Carregar fila ao iniciar
+        window.addEventListener('load', fetchQueue);
+
+        async function fetchQueue() {
+            try {
+                const response = await fetch(API_QUEUE);
+                const json = await response.json();
+                queueData = json.data || [];
+                renderQueue();
+            } catch (error) {
+                console.error("Erro ao carregar fila:", error);
+                document.getElementById('os-queue-container').innerHTML = '<p class="p-4 text-red-500 text-xs">Erro ao conectar com servidor.</p>';
+            }
+        }
+
+        function renderQueue() {
+            const container = document.getElementById('os-queue-container');
+            container.innerHTML = '';
+
+            queueData.forEach(os => {
+                const urgencyColors = {
+                    Urgente: 'bg-red-100 text-red-600',
+                    Alta: 'bg-orange-100 text-orange-600',
+                    Normal: 'bg-blue-100 text-blue-600'
+                };
+                
+                const card = document.createElement('div');
+                card.className = `p-4 cursor-pointer hover:bg-slate-50 transition border-l-4 border-transparent ${selectedOS?.id === os.id ? 'os-card-selected' : ''}`;
+                card.onclick = () => selectOS(os);
+                
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-1">
+                        <span class="text-sm font-black text-slate-900">${os.business_id}</span>
+                        <span class="px-2 py-0.5 text-[9px] font-bold rounded uppercase ${urgencyColors[os.urgency] || urgencyColors.Normal}">${os.urgency}</span>
+                    </div>
+                    <p class="text-[10px] font-bold text-turbo-blue uppercase tracking-widest truncate">${os.client}</p>
+                    <p class="text-xs text-slate-500 font-medium">${os.model}</p>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function selectOS(os) {
+            selectedOS = os;
+            renderQueue();
+            
+            // UI Toggle
+            document.getElementById('empty-state').classList.add('hidden');
+            document.getElementById('workspace-header').classList.remove('hidden');
+            document.getElementById('components-grid').classList.remove('hidden');
+            document.getElementById('footer-actions').classList.remove('hidden');
+
+            // Header Update
+            document.getElementById('current-os-id').innerText = os.business_id;
+            document.getElementById('current-os-desc').innerText = `${os.model} | ${os.client}`;
+
+            renderComponentCards();
+        }
+
+        function renderComponentCards() {
+            const grid = document.getElementById('components-grid');
+            grid.innerHTML = '';
+
+            Object.keys(COMPONENT_STRUCTURE).forEach(name => {
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden";
+                card.innerHTML = `
+                    <div class="px-4 py-3 bg-slate-50 border-b flex justify-between items-center">
+                        <h4 class="font-black text-slate-800 text-sm italic">${name}</h4>
+                        <span class="text-[8px] font-black uppercase px-2 py-0.5 bg-turbo-blue text-white rounded-full">Retífica</span>
+                    </div>
+                    <div class="p-3">
+                        <button class="w-full text-center border-2 border-red-500 text-red-500 text-[10px] font-black py-1 rounded-lg uppercase hover:bg-red-50 transition mb-3">
+                            Entrar em Retrabalho
+                        </button>
+                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Checklist de Execução:</p>
+                        <div class="checklist-scroll max-h-48 overflow-y-auto space-y-1 mb-4 pr-1">
+                            ${COMPONENT_STRUCTURE[name].map(item => `
+                                <label class="flex items-center space-x-3 p-2 hover:bg-slate-50 rounded-lg cursor-pointer transition border border-transparent">
+                                    <input type="checkbox" class="w-4 h-4 rounded-md border-slate-300 text-turbo-teal focus:ring-turbo-teal" data-item="${item}">
+                                    <span class="text-[11px] font-bold text-slate-600 uppercase tracking-tighter">${item}</span>
+                                </label>
+                            `).join('')}
+                        </div>
+                        <div class="space-y-3">
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="toggleRoute(this)" class="py-1.5 border border-slate-200 bg-slate-50 text-[9px] font-black uppercase rounded-lg hover:bg-slate-100 transition">Retífica</button>
+                                <button onclick="toggleRoute(this)" class="py-1.5 border border-slate-200 bg-slate-50 text-[9px] font-black uppercase rounded-lg hover:bg-slate-100 transition">Solda</button>
+                                <button onclick="toggleRoute(this)" class="py-1.5 border border-slate-200 bg-slate-50 text-[9px] font-black uppercase rounded-lg hover:bg-slate-100 transition">Metrologia</button>
+                                <button onclick="toggleRoute(this)" class="py-1.5 border border-slate-200 bg-slate-50 text-[9px] font-black uppercase rounded-lg hover:bg-slate-100 transition">Bancada</button>
+                            </div>
+                            <button onclick="finishComponent(this, '${name}')" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-lg shadow-emerald-100">
+                                Pronto p/ Montagem
+                            </button>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function toggleRoute(btn) {
+            btn.classList.toggle('active-routing');
+        }
+
+        async function finishComponent(btn, componentName) {
+            if (!selectedOS) return;
+
+            const card = btn.closest('.bg-white');
+            const checkboxes = card.querySelectorAll('input[type="checkbox"]:checked');
+            const services = Array.from(checkboxes).map(cb => cb.dataset.item);
+
+            if (services.length === 0) {
+                alert("Selecione ao menos um item do checklist.");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> SALVANDO...';
+
+            const payload = {
+                os_id: selectedOS.id,
+                action: "FINISH_COMPONENT",
+                component_data: {
+                    name: componentName,
+                    status: "PRONTO",
+                    services: services
+                }
+            };
+
+            try {
+                const response = await fetch(API_ACTION, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    btn.classList.replace('bg-emerald-500', 'bg-slate-400');
+                    btn.innerHTML = '<i class="fa-solid fa-check"></i> CONCLUÍDO';
+                    card.classList.add('opacity-60', 'pointer-events-none');
+                } else {
+                    throw new Error("Erro ao salvar componente");
+                }
+            } catch (error) {
+                alert("Falha ao salvar. Tente novamente.");
+                btn.disabled = false;
+                btn.innerText = 'Pronto p/ Montagem';
+            }
+        }
+
+        async function releaseOS() {
+            if (!selectedOS) return;
+
+            const payload = {
+                os_id: selectedOS.id,
+                action: "RELEASE_OS"
+            };
+
+            try {
+                const response = await fetch(API_ACTION, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    alert("OS Liberada com sucesso!");
+                    window.location.reload();
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        // Modal Helpers
+        function openSpecialServiceModal() { document.getElementById('modal-special').classList.remove('hidden'); }
+        function closeSpecialServiceModal() { document.getElementById('modal-special').classList.add('hidden'); }
+    </script>
+</body>
+</html>
