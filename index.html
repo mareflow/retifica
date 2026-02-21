@@ -124,12 +124,7 @@
         </main>
     </div>
 
-    <!-- BOTÃO FIXO FINAL -->
-    <div id="footer-actions" class="fixed bottom-0 right-0 p-6 z-40 hidden">
-        <button onclick="releaseOS()" class="bg-turbo-orange hover:bg-orange-700 text-white px-10 py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-sm shadow-2xl transition-all transform hover:-translate-y-1 active:translate-y-0 shadow-orange-900/40">
-            Concluir Limpeza e Liberar OS
-        </button>
-    </div>
+    <!-- O fluxo agora é individual por peça, o botão global foi removido para evitar erros -->
 
     <!-- MODAL SERVIÇO ESPECIAL (Placeholder Visual) -->
     <div id="modal-special" class="fixed inset-0 bg-slate-900/80 z-[100] flex items-center justify-center hidden p-4">
@@ -247,33 +242,33 @@
 
             Object.keys(COMPONENT_STRUCTURE).forEach(name => {
                 const card = document.createElement('div');
-                card.className = "bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden";
+                card.className = "bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden transition-all duration-300";
+                card.id = `comp-card-${name}`;
                 card.innerHTML = `
                     <div class="px-4 py-3 bg-slate-50 border-b flex justify-between items-center">
                         <h4 class="font-black text-slate-800 text-sm italic">${name}</h4>
                         <span class="text-[8px] font-black uppercase px-2 py-0.5 bg-turbo-blue text-white rounded-full">Retífica</span>
                     </div>
-                    <div class="p-3">
-                        <button class="w-full text-center border-2 border-red-500 text-red-500 text-[10px] font-black py-1 rounded-lg uppercase hover:bg-red-50 transition mb-3">
-                            Entrar em Retrabalho
-                        </button>
+                    <div class="p-3 flex-grow flex flex-col">
                         <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Checklist de Execução:</p>
-                        <div class="checklist-scroll max-h-48 overflow-y-auto space-y-1 mb-4 pr-1">
+                        <div class="checklist-scroll max-h-40 overflow-y-auto space-y-1 mb-4 pr-1">
                             ${COMPONENT_STRUCTURE[name].map(item => `
                                 <label class="flex items-center space-x-3 p-2 hover:bg-slate-50 rounded-lg cursor-pointer transition border border-transparent">
                                     <input type="checkbox" class="w-4 h-4 rounded-md border-slate-300 text-turbo-teal focus:ring-turbo-teal" data-item="${item}">
-                                    <span class="text-[11px] font-bold text-slate-600 uppercase tracking-tighter">${item}</span>
+                                    <span class="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">${item}</span>
                                 </label>
                             `).join('')}
                         </div>
-                        <div class="space-y-3">
+                        
+                        <div class="mt-auto space-y-3">
+                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Encaminhar Para:</p>
                             <div class="grid grid-cols-2 gap-2">
-                                <button onclick="toggleRoute(this)" class="py-1.5 border border-slate-200 bg-slate-50 text-[9px] font-black uppercase rounded-lg hover:bg-slate-100 transition">Retífica</button>
-                                <button onclick="toggleRoute(this)" class="py-1.5 border border-slate-200 bg-slate-50 text-[9px] font-black uppercase rounded-lg hover:bg-slate-100 transition">Solda</button>
-                                <button onclick="toggleRoute(this)" class="py-1.5 border border-slate-200 bg-slate-50 text-[9px] font-black uppercase rounded-lg hover:bg-slate-100 transition">Metrologia</button>
-                                <button onclick="toggleRoute(this)" class="py-1.5 border border-slate-200 bg-slate-50 text-[9px] font-black uppercase rounded-lg hover:bg-slate-100 transition">Bancada</button>
+                                <button onclick="sendPieceTo(this, '${name}', 'RETIFICA')" class="py-2 border border-slate-200 bg-slate-50 text-[9px] font-black uppercase rounded-lg hover:bg-turbo-teal hover:text-white transition">Retífica</button>
+                                <button onclick="sendPieceTo(this, '${name}', 'SOLDA')" class="py-2 border border-slate-200 bg-slate-50 text-[9px] font-black uppercase rounded-lg hover:bg-turbo-teal hover:text-white transition">Solda</button>
+                                <button onclick="sendPieceTo(this, '${name}', 'METROLOGIA')" class="py-2 border border-slate-200 bg-slate-50 text-[9px] font-black uppercase rounded-lg hover:bg-turbo-teal hover:text-white transition">Metrologia</button>
+                                <button onclick="sendPieceTo(this, '${name}', 'BANCADA')" class="py-2 border border-slate-200 bg-slate-50 text-[9px] font-black uppercase rounded-lg hover:bg-turbo-teal hover:text-white transition">Bancada</button>
                             </div>
-                            <button onclick="finishComponent(this, '${name}')" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-lg shadow-emerald-100">
+                            <button onclick="sendPieceTo(this, '${name}', 'MONTAGEM')" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-lg shadow-emerald-100">
                                 Pronto p/ Montagem
                             </button>
                         </div>
@@ -360,6 +355,52 @@
         // Modal Helpers
         function openSpecialServiceModal() { document.getElementById('modal-special').classList.remove('hidden'); }
         function closeSpecialServiceModal() { document.getElementById('modal-special').classList.add('hidden'); }
+		
+		async function sendPieceTo(btn, componentName, targetSector) {
+            if (!selectedOS) return;
+
+            const card = document.getElementById(`comp-card-${componentName}`);
+            const checkboxes = card.querySelectorAll('input[type="checkbox"]:checked');
+            const services = Array.from(checkboxes).map(cb => cb.dataset.item);
+
+            // Pergunta de confirmação
+            if (!confirm(`Confirmar envio de ${componentName} para ${targetSector}?`)) return;
+
+            btn.disabled = true;
+            const originalText = btn.innerText;
+            btn.innerText = 'ENVIANDO...';
+
+            const payload = {
+                os_id: selectedOS.id,
+                action: "PIECE_ROUTING",
+                component: componentName,
+                target: targetSector,
+                executed_services: services
+            };
+
+            try {
+                const response = await fetch(API_ACTION, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    // Efeito Cinza (Inativo) igual ao seu vídeo
+                    card.classList.add('opacity-40', 'grayscale', 'pointer-events-none');
+                    btn.innerText = 'ENCAMINHADO';
+                } else {
+                    alert("Erro ao encaminhar peça.");
+                    btn.disabled = false;
+                    btn.innerText = originalText;
+                }
+            } catch (error) {
+                console.error(error);
+                alert("Falha na conexão.");
+                btn.disabled = false;
+                btn.innerText = originalText;
+            }
+        }
     </script>
 </body>
 </html>
