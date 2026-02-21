@@ -179,8 +179,17 @@
         async function fetchQueue() {
             try {
                 const response = await fetch(API_QUEUE);
-                const json = await response.json();
-                queueData = json.data || [];
+                const result = await response.json();
+                
+                // CORREÇÃO: Trata se vier Array direto, Objeto único ou com chave .data
+                if (Array.isArray(result)) {
+                    queueData = result;
+                } else if (result && result.business_id) {
+                    queueData = [result]; // Se for um objeto único, coloca dentro de um array
+                } else {
+                    queueData = result.data || [];
+                }
+
                 renderQueue();
             } catch (error) {
                 console.error("Erro ao carregar fila:", error);
