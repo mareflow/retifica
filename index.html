@@ -245,10 +245,22 @@ function selectOS(os) {
             const grid = document.getElementById('components-grid');
             grid.innerHTML = '';
 
-            Object.keys(COMPONENT_STRUCTURE).forEach(name => {
+            // Lógica Unificada: Renderiza apenas os componentes enviados pelo backend para este setor
+            const componentsToShow = selectedOS.components_to_render || [];
+
+            if (componentsToShow.length === 0) {
+                grid.innerHTML = '<div class="col-span-full p-10 text-center text-slate-400 font-bold uppercase italic">Nenhum componente pendente nesta OS para Retífica.</div>';
+                return;
+            }
+
+            componentsToShow.forEach(name => {
                 const card = document.createElement('div');
                 card.className = "bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden transition-all duration-300";
                 card.id = `comp-card-${name}`;
+                
+                // Busca os itens do checklist na estrutura estática, ou mostra uma lista padrão caso não encontre
+                const checklistItems = COMPONENT_STRUCTURE[name] || ["SERVIÇO GERAL"];
+
                 card.innerHTML = `
                     <div class="px-4 py-3 bg-slate-50 border-b flex justify-between items-center">
                         <h4 class="font-black text-slate-800 text-sm italic">${name}</h4>
@@ -257,7 +269,7 @@ function selectOS(os) {
                     <div class="p-3 flex-grow flex flex-col">
                         <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Checklist de Execução:</p>
                         <div class="checklist-scroll max-h-40 overflow-y-auto space-y-1 mb-4 pr-1">
-                            ${COMPONENT_STRUCTURE[name].map(item => `
+                            ${checklistItems.map(item => `
                                 <label class="flex items-center space-x-3 p-2 hover:bg-slate-50 rounded-lg cursor-pointer transition border border-transparent">
                                     <input type="checkbox" class="w-4 h-4 rounded-md border-slate-300 text-turbo-teal focus:ring-turbo-teal" data-item="${item}">
                                     <span class="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">${item}</span>
@@ -268,7 +280,7 @@ function selectOS(os) {
                         <div class="mt-auto space-y-3">
                             <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Encaminhar Para:</p>
                             <div class="grid grid-cols-2 gap-2">
-                                <button onclick="sendPieceTo(this, '${name}', 'RETIFICA')" class="py-2 border border-slate-200 bg-slate-50 text-[9px] font-black uppercase rounded-lg hover:bg-turbo-teal hover:text-white transition">Retífica</button>
+                                <button class="py-2 border bg-turbo-teal text-white text-[9px] font-black uppercase rounded-lg cursor-default">Retífica</button>
                                 <button onclick="sendPieceTo(this, '${name}', 'SOLDA')" class="py-2 border border-slate-200 bg-slate-50 text-[9px] font-black uppercase rounded-lg hover:bg-turbo-teal hover:text-white transition">Solda</button>
                                 <button onclick="sendPieceTo(this, '${name}', 'METROLOGIA')" class="py-2 border border-slate-200 bg-slate-50 text-[9px] font-black uppercase rounded-lg hover:bg-turbo-teal hover:text-white transition">Metrologia</button>
                                 <button onclick="sendPieceTo(this, '${name}', 'BANCADA')" class="py-2 border border-slate-200 bg-slate-50 text-[9px] font-black uppercase rounded-lg hover:bg-turbo-teal hover:text-white transition">Bancada</button>
