@@ -149,7 +149,7 @@
     <!-- JS LOGIC -->
     <script>
         const API_QUEUE = 'https://webhook.mareflow.com.br/webhook/production/rectification-queue';
-        const API_ACTION = 'https://webhook.mareflow.com.br/webhook/production/rectification-action';
+        const API_ACTION = 'https://webhook.mareflow.com.br/webhook/production/component-routing';
         
         let selectedOS = null;
         let queueData = [];
@@ -369,7 +369,6 @@ function selectOS(os) {
         async function sendPieceTo(btn, componentName, targetSector) {
             if (!selectedOS) return;
 
-            // Mostra o modal customizado em vez do confirm do navegador
             const modal = document.getElementById('modal-confirm-routing');
             const msg = document.getElementById('routing-confirm-msg');
             const confirmBtn = document.getElementById('btn-confirm-routing-final');
@@ -377,7 +376,6 @@ function selectOS(os) {
             modal.classList.remove('hidden');
             msg.innerText = `Confirmar o envio de ${componentName} para o setor de ${targetSector}?`;
 
-            // Configura o botão de confirmação dentro do modal
             confirmBtn.onclick = async () => {
                 modal.classList.add('hidden');
                 
@@ -389,9 +387,9 @@ function selectOS(os) {
                 const originalText = btn.innerText;
                 btn.innerText = 'ENVIANDO...';
 
+                // PAYLOADoficial para o Webhook component-routing
                 const payload = {
                     os_id: selectedOS.id,
-                    action: "PIECE_ROUTING",
                     component: componentName,
                     target: targetSector,
                     executed_services: services
@@ -405,16 +403,9 @@ function selectOS(os) {
                     });
 
                     if (response.ok) {
-                        // Aplica o efeito visual de "concluído" no card
                         card.classList.add('opacity-40', 'grayscale', 'pointer-events-none');
-                        
-                        // Formata o nome do setor para exibição (Ex: SOLDA -> SOLDA)
                         const sectorLabel = targetSector.toUpperCase();
-                        
-                        // Atualiza o texto do botão específico que foi clicado
                         btn.innerHTML = `<i class="fa-solid fa-check-double mr-1"></i> ENCAMINHADO (${sectorLabel})`;
-                        
-                        // Garante que o botão tenha um estilo de destaque mesmo em cinza
                         btn.classList.remove('bg-slate-50', 'text-slate-600');
                         btn.classList.add('bg-turbo-teal', 'text-white');
                     } else {
@@ -423,7 +414,7 @@ function selectOS(os) {
                         btn.innerText = originalText;
                     }
                 } catch (error) {
-                    console.error(error);
+                    console.error("Erro no roteamento:", error);
                     alert("Falha na conexão.");
                     btn.disabled = false;
                     btn.innerText = originalText;
