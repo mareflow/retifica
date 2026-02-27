@@ -399,9 +399,9 @@ function selectOS(os) {
                 const originalText = btn.innerText;
                 btn.innerText = 'ENVIANDO...';
 
-                // PAYLOADoficial para o Webhook component-routing
+                // PAYLOAD oficial ajustado para os_id (vinda da View do banco)
                 const payload = {
-                    os_id: selectedOS.id,
+                    os_id: selectedOS.os_id,
                     component: componentName,
                     target: targetSector,
                     executed_services: services
