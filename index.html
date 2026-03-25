@@ -127,20 +127,36 @@
     <!-- O fluxo agora é individual por peça, o botão global foi removido para evitar erros -->
 
     <!-- MODAL SERVIÇO ESPECIAL (Placeholder Visual) -->
+<!-- MODAL SERVIÇO ESPECIAL (VERSÃO TURBOSUL) -->
     <div id="modal-special" class="fixed inset-0 bg-slate-900/80 z-[100] flex items-center justify-center hidden p-4">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border-t-8 border-turbo-blue">
             <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 class="font-black text-slate-800 uppercase italic tracking-tight">Adicionar Serviço Especial</h3>
+                <h3 class="font-black text-slate-800 uppercase italic tracking-tight text-lg">Adicionar Serviço Especial</h3>
                 <button onclick="closeSpecialServiceModal()" class="text-slate-400 hover:text-slate-600 transition"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
-            <div class="p-6 space-y-4">
+            <div class="p-8 space-y-6">
                 <div>
-                    <label class="block text-[10px] font-black text-slate-400 uppercase mb-2">Nome do Item / Processo</label>
-                    <input type="text" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 outline-none border-2 border-transparent focus:border-turbo-teal font-bold transition">
+                    <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">Nome do Item / Processo</label>
+                    <input type="text" id="special-item-name" oninput="validateSpecialModal()" placeholder="EX: RECUPERAÇÃO DE ROSCA, POLIMENTO ESPECIAL..." class="w-full bg-slate-100 border-2 border-transparent focus:border-turbo-blue rounded-2xl px-5 py-4 text-sm font-bold outline-none transition-all text-slate-800">
                 </div>
-                <div class="flex space-x-3">
-                    <button class="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold hover:bg-slate-200 transition">Cancelar</button>
-                    <button class="flex-1 bg-turbo-blue text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-200 transition">Adicionar Item</button>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest">Tipo de Peça</label>
+                    <div class="grid grid-cols-2 gap-4">
+                        <label class="flex items-center p-4 border-2 rounded-2xl cursor-pointer hover:bg-slate-50 transition-all border-turbo-blue bg-blue-50/30" id="label-padrao">
+                            <input type="radio" name="special-type" value="PADRAO" checked class="hidden" onchange="toggleSpecialRadioStyle()">
+                            <div class="w-5 h-5 rounded-full border-2 border-turbo-blue flex items-center justify-center mr-3"><div class="w-2.5 h-2.5 bg-turbo-blue rounded-full"></div></div>
+                            <span class="text-[11px] font-black text-turbo-blue uppercase tracking-tighter leading-tight">Peça Padrão<br><small class="text-[8px] opacity-60">PRODUÇÃO</small></span>
+                        </label>
+                        <label class="flex items-center p-4 border-2 border-slate-100 rounded-2xl cursor-pointer hover:bg-slate-50 transition-all" id="label-retrabalho">
+                            <input type="radio" name="special-type" value="RETRABALHO" class="hidden" onchange="toggleSpecialRadioStyle()">
+                            <div class="w-5 h-5 rounded-full border-2 border-slate-300 flex items-center justify-center mr-3"></div>
+                            <span class="text-[11px] font-black text-slate-400 uppercase tracking-tighter leading-tight">Retrabalho<br><small class="text-[8px] opacity-60">LINHA PARADA</small></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="flex space-x-3 pt-6 border-t">
+                    <button onclick="closeSpecialServiceModal()" class="flex-1 bg-slate-100 text-slate-400 font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest hover:bg-slate-200">Cancelar</button>
+                    <button id="btn-add-special" disabled onclick="addSpecialCard()" class="flex-[2] bg-turbo-blue/40 text-white font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest cursor-not-allowed shadow-lg transition-all">Adicionar Item</button>
                 </div>
             </div>
         </div>
@@ -245,7 +261,22 @@ function renderComponentCards() {
             const grid = document.getElementById('components-grid');
             if (!grid || !selectedOS) return;
 
-            const componentsToShow = selectedOS.components_to_render || [];
+            // Unifica componentes do banco com os especiais criados nesta sessão
+            const componentsFromDB = selectedOS.components_to_render || [];
+            // Aqui mapeamos os nomes para o loop entender
+            const allToRender = [
+                ...componentsFromDB.map(name => ({ title: name, isSpecial: false })),
+                ...specialItemsList
+            ];
+
+            if (allToRender.length === 0) {
+                grid.innerHTML = '<div class="col-span-full p-20 text-center"><p class="text-slate-400 font-black uppercase tracking-widest italic">Aguardando componentes serem liberados.</p></div>';
+                return;
+            }
+
+            grid.innerHTML = allToRender.map(comp => {
+                const name = comp.title;
+                const trk = (selectedOS.tracking || []).find(t => t.component === name);
             if (componentsToShow.length === 0) {
                 grid.innerHTML = '<div class="col-span-full p-20 text-center"><p class="text-slate-400 font-black uppercase tracking-widest italic">Aguardando componentes serem liberados.</p></div>';
                 return;
@@ -365,9 +396,72 @@ function renderComponentCards() {
             }
         }
 
-        // Modal Helpers
-        function openSpecialServiceModal() { document.getElementById('modal-special').classList.remove('hidden'); }
+        // Memória para itens especiais
+        let specialItemsList = [];
+
+        function openSpecialServiceModal() { 
+            document.getElementById('special-item-name').value = ''; 
+            validateSpecialModal();
+            document.getElementById('modal-special').classList.remove('hidden'); 
+        }
+        
         function closeSpecialServiceModal() { document.getElementById('modal-special').classList.add('hidden'); }
+
+        function validateSpecialModal() {
+            const name = document.getElementById('special-item-name').value;
+            const btn = document.getElementById('btn-add-special');
+            if(name.length >= 3) {
+                btn.disabled = false;
+                btn.className = 'flex-[2] bg-turbo-blue text-white font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest shadow-lg hover:bg-blue-700 transition-all cursor-pointer';
+            } else {
+                btn.disabled = true;
+                btn.className = 'flex-[2] bg-turbo-blue/40 text-white font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest cursor-not-allowed';
+            }
+        }
+
+        function toggleSpecialRadioStyle() {
+            const isRetrabalho = document.querySelector('input[name="special-type"]:checked').value === 'RETRABALHO';
+            const lp = document.getElementById('label-padrao');
+            const lr = document.getElementById('label-retrabalho');
+            
+            if(isRetrabalho) {
+                lr.classList.add('border-turbo-blue', 'bg-blue-50/30');
+                lr.querySelector('div').innerHTML = '<div class="w-2.5 h-2.5 bg-turbo-blue rounded-full"></div>';
+                lr.querySelector('span').classList.replace('text-slate-400', 'text-turbo-blue');
+                lp.classList.remove('border-turbo-blue', 'bg-blue-50/30');
+                lp.querySelector('div').innerHTML = '';
+                lp.querySelector('span').classList.replace('text-turbo-blue', 'text-slate-400');
+            } else {
+                lp.classList.add('border-turbo-blue', 'bg-blue-50/30');
+                lp.querySelector('div').innerHTML = '<div class="w-2.5 h-2.5 bg-turbo-blue rounded-full"></div>';
+                lp.querySelector('span').classList.replace('text-slate-400', 'text-turbo-blue');
+                lr.classList.remove('border-turbo-blue', 'bg-blue-50/30');
+                lr.querySelector('div').innerHTML = '';
+                lr.querySelector('span').classList.replace('text-turbo-blue', 'text-slate-400');
+            }
+        }
+
+        function addSpecialCard() {
+            const name = document.getElementById('special-item-name').value.toUpperCase();
+            const type = document.querySelector('input[name="special-type"]:checked').value;
+            
+            specialItemsList.push({
+                title: name,
+                type: type,
+                items: ["Serviço Geral Retífica", "Recuperação", "Conferência"],
+                isSpecial: true
+            });
+
+            closeSpecialServiceModal();
+            renderComponentCards();
+        }
+
+        // Ajuste no selectOS para limpar especiais anteriores
+        const originalSelectOS = selectOS;
+        selectOS = function(os) {
+            specialItemsList = []; // Reseta a lista temporária
+            originalSelectOS(os);
+        };
 		
 		// Novas funções para controlar o modal customizado
         function closeRoutingModal() {
