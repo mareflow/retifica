@@ -69,7 +69,6 @@
                 <h2 class="text-xs font-black uppercase tracking-widest text-slate-400">Ordens na Fila</h2>
             </div>
             <div id="os-queue-container" class="divide-y divide-slate-100">
-                <!-- Cards renderizados via JS -->
                 <div class="p-8 text-center text-slate-400 animate-pulse italic">Carregando fila...</div>
             </div>
         </aside>
@@ -124,24 +123,58 @@
         </main>
     </div>
 
-    <!-- O fluxo agora é individual por peça, o botão global foi removido para evitar erros -->
-
-    <!-- MODAL SERVIÇO ESPECIAL (Placeholder Visual) -->
+    <!-- MODAL SERVIÇO ESPECIAL (VERSÃO FIEL AO PRINT) -->
     <div id="modal-special" class="fixed inset-0 bg-slate-900/80 z-[100] flex items-center justify-center hidden p-4">
         <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
-            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 class="font-black text-slate-800 uppercase italic tracking-tight">Adicionar Serviço Especial</h3>
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-white">
+                <h3 class="font-black text-slate-800 text-lg">Adicionar Serviço Especial</h3>
                 <button onclick="closeSpecialServiceModal()" class="text-slate-400 hover:text-slate-600 transition"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
-            <div class="p-6 space-y-4">
+            <div class="p-8 space-y-6">
                 <div>
-                    <label class="block text-[10px] font-black text-slate-400 uppercase mb-2">Nome do Item / Processo</label>
-                    <input type="text" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 outline-none border-2 border-transparent focus:border-turbo-teal font-bold transition">
+                    <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">NOME DO ITEM / PROCESSO</label>
+                    <input type="text" id="special-item-name" oninput="validateSpecialModal()" placeholder="EX: RECUPERAÇÃO DE ROSCA, POLIMENTO ESPECIAL..." class="w-full bg-[#334155] text-white rounded-xl px-5 py-4 text-sm font-bold outline-none border-2 border-transparent focus:border-blue-500 transition-all">
                 </div>
-                <div class="flex space-x-3">
-                    <button class="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold hover:bg-slate-200 transition">Cancelar</button>
-                    <button class="flex-1 bg-turbo-blue text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-200 transition">Adicionar Item</button>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase mb-3 ml-1">TIPO DE PEÇA</label>
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- Card Peça Padrão -->
+                        <label onclick="toggleSpecialRadioStyle('PADRAO')" id="label-padrao" class="flex items-center p-4 border-2 rounded-2xl cursor-pointer transition-all border-blue-600 bg-blue-50/50">
+                            <input type="radio" name="special-type" value="PADRAO" checked class="hidden">
+                            <div class="w-6 h-6 rounded-full border-2 border-blue-600 flex items-center justify-center mr-3 bg-white">
+                                <div id="radio-dot-padrao" class="w-3 h-3 bg-blue-600 rounded-full"></div>
+                            </div>
+                            <span class="text-[11px] font-black text-blue-800 uppercase tracking-tighter">Peça Padrão (Produção)</span>
+                        </label>
+                        <!-- Card Retrabalho -->
+                        <label onclick="toggleSpecialRadioStyle('RETRABALHO')" id="label-retrabalho" class="flex items-center p-4 border-2 border-slate-100 rounded-2xl cursor-pointer transition-all hover:bg-slate-50">
+                            <input type="radio" name="special-type" value="RETRABALHO" class="hidden">
+                            <div class="w-6 h-6 rounded-full border-2 border-slate-300 flex items-center justify-center mr-3 bg-white">
+                                <div id="radio-dot-retrabalho" class="w-3 h-3 bg-transparent rounded-full"></div>
+                            </div>
+                            <span class="text-[11px] font-black text-red-700/60 uppercase tracking-tighter">Retrabalho (Linha Parada)</span>
+                        </label>
+                    </div>
                 </div>
+                <div class="flex justify-end space-x-3 pt-6 border-t border-slate-50">
+                    <button onclick="closeSpecialServiceModal()" class="bg-slate-500 text-white font-black px-8 py-3.5 rounded-xl uppercase text-xs tracking-widest hover:bg-slate-600 transition">Cancelar</button>
+                    <button id="btn-add-special" disabled onclick="addSpecialCard()" class="bg-blue-300 text-white font-black px-10 py-3.5 rounded-xl uppercase text-xs tracking-widest transition-all cursor-not-allowed">Adicionar Item</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE CONFIRMAÇÃO DE ROTEAMENTO (CUSTOM) -->
+    <div id="modal-confirm-routing" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl text-center border-t-8 border-turbo-teal">
+            <div class="w-20 h-20 bg-teal-50 text-turbo-teal rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fa-solid fa-paper-plane text-3xl"></i>
+            </div>
+            <h4 class="text-xl font-black text-slate-800 mb-2 uppercase italic">Encaminhar Peça?</h4>
+            <p id="routing-confirm-msg" class="text-slate-500 text-sm mb-6 font-medium">Você está prestes a enviar este item para outro setor. Esta ação é definitiva.</p>
+            <div class="flex gap-3">
+                <button onclick="closeRoutingModal()" class="flex-1 bg-slate-100 text-slate-600 font-bold py-3 rounded-xl hover:bg-slate-200 transition uppercase text-xs tracking-widest">Cancelar</button>
+                <button id="btn-confirm-routing-final" class="flex-1 bg-turbo-teal text-white font-bold py-3 rounded-xl hover:bg-teal-700 transition shadow-lg shadow-teal-100 uppercase text-xs tracking-widest">Sim, Enviar</button>
             </div>
         </div>
     </div>
@@ -153,8 +186,8 @@
         
         let selectedOS = null;
         let queueData = [];
+        let specialItemsList = [];
 
-        // Estrutura de dados dos componentes
         const COMPONENT_STRUCTURE = {
             CT: ["ANÁLISE", "ROSCAS", "ROSCAS POSTIÇAS", "FACEAMENTO PÉ/ MESA", "FACEAMENTO SAÍDA", "EMBUCHAMENTO", "SOB MEDIDA", "ABERTURA DE TRINCAS", "RETIRAR PRISIONEIROS", "REMOVER WASTEGATES", "MONTAR WASTEGATE", "FRESAMENTO DA MOEDA", "ACENTAMENTO DA CCE", "ADAPTAÇÃO DE BORDA", "EMBUCHAMENTO SAÍDA"],
             CCO: ["ANÁLISE", "ROSCAS", "ROSCAS POSTIÇAS", "EMBUCHAMENTO", "SOB MEDIDA", "ABERTURA DE TRINCAS", "RETIRAR PARAFUSOS", "ADAPTAÇÃO ENCAIXE PRATO", "ADAPTAÇÃO BOCAL ADMISSÃO", "ADAPTAÇÃO BOCAL FILTRO", "BOCAL ADMISSÃO", "BOCAL FILTRO"],
@@ -168,7 +201,6 @@
             ANEXOS: ["SERVIÇO GERAL RETÍFICA", "REVISÃO DE ACESSÓRIOS"]
         };
 
-        // Carregar fila ao iniciar
         window.addEventListener('load', fetchQueue);
 
         async function fetchQueue() {
@@ -176,11 +208,10 @@
                 const response = await fetch(API_QUEUE);
                 const result = await response.json();
                 
-                // CORREÇÃO: Trata se vier Array direto, Objeto único ou com chave .data
                 if (Array.isArray(result)) {
                     queueData = result;
                 } else if (result && result.business_id) {
-                    queueData = [result]; // Se for um objeto único, coloca dentro de um array
+                    queueData = [result];
                 } else {
                     queueData = result.data || [];
                 }
@@ -219,47 +250,46 @@
             });
         }
 
-function selectOS(os) {
+        function selectOS(os) {
             selectedOS = os;
-            
-            // 1. Atualiza o visual da fila (seleção azul no card)
+            specialItemsList = []; // Limpa especiais ao trocar de OS
             renderQueue();
-            
-            // 2. Troca as telas (esconde o aviso de "selecione" e mostra o trabalho)
             document.getElementById('empty-state').classList.add('hidden');
             document.getElementById('workspace-header').classList.remove('hidden');
             document.getElementById('components-grid').classList.remove('hidden');
-
-            // 3. CARREGA OS DADOS REAIS NO PAINEL AZUL
             document.getElementById('current-os-id').innerText = os.business_id;
             document.getElementById('current-os-desc').innerText = `${os.model} | ${os.client}`;
-
-            // 4. Desenha os cards de componentes (CCE, CCO, etc)
             renderComponentCards();
-            
-            // 5. Scroll para o topo para garantir que o usuário veja o início do processo
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-function renderComponentCards() {
+        function renderComponentCards() {
             const grid = document.getElementById('components-grid');
             if (!grid || !selectedOS) return;
 
-            const componentsToShow = selectedOS.components_to_render || [];
-            if (componentsToShow.length === 0) {
+            const baseComponents = selectedOS.components_to_render || [];
+            
+            // Une componentes originais com os especiais adicionados manualmente
+            const allComponents = [
+                ...baseComponents.map(name => ({ name, isSpecial: false })),
+                ...specialItemsList.map(item => ({ name: item.title, isSpecial: true, type: item.type }))
+            ];
+
+            if (allComponents.length === 0) {
                 grid.innerHTML = '<div class="col-span-full p-20 text-center"><p class="text-slate-400 font-black uppercase tracking-widest italic">Aguardando componentes serem liberados.</p></div>';
                 return;
             }
 
-            grid.innerHTML = componentsToShow.map(name => {
+            grid.innerHTML = allComponents.map(comp => {
+                const name = comp.name;
                 const trk = (selectedOS.tracking || []).find(t => t.component === name);
                 const isSent = !!trk && trk.stage !== 'RETIFICA' && trk.stage !== 'Retífica';
                 
                 const cardStyle = isSent ? 'opacity-40 grayscale pointer-events-none' : '';
-                const badgeText = isSent ? `EM ${trk.stage.toUpperCase()}` : 'Retífica';
-                const badgeColor = isSent ? 'bg-slate-500' : 'bg-turbo-teal';
+                const badgeText = isSent ? `EM ${trk.stage.toUpperCase()}` : (comp.isSpecial ? comp.type : 'Retífica');
+                const badgeColor = isSent ? 'bg-slate-500' : (comp.type === 'RETRABALHO' ? 'bg-red-600' : 'bg-turbo-teal');
 
-                const checklistItems = COMPONENT_STRUCTURE[name] || ["SERVIÇO GERAL"];
+                const checklistItems = comp.isSpecial ? ["Serviço Geral Retífica", "Recuperação", "Conferência"] : (COMPONENT_STRUCTURE[name] || ["SERVIÇO GERAL"]);
 
                 const itemHtml = checklistItems.map(item => `
                     <label class="flex items-center space-x-3 cursor-pointer group py-1.5">
@@ -291,89 +321,6 @@ function renderComponentCards() {
             }).join('');
         }
 
-        function toggleRoute(btn) {
-            btn.classList.toggle('active-routing');
-        }
-
-        async function finishComponent(btn, componentName) {
-            if (!selectedOS) return;
-
-            const card = btn.closest('.bg-white');
-            const checkboxes = card.querySelectorAll('input[type="checkbox"]:checked');
-            const services = Array.from(checkboxes).map(cb => cb.dataset.item);
-
-            if (services.length === 0) {
-                alert("Selecione ao menos um item do checklist.");
-                return;
-            }
-
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> SALVANDO...';
-
-            const payload = {
-                os_id: selectedOS.id,
-                action: "FINISH_COMPONENT",
-                component_data: {
-                    name: componentName,
-                    status: "PRONTO",
-                    services: services
-                }
-            };
-
-            try {
-                const response = await fetch(API_ACTION, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (response.ok) {
-                    btn.classList.replace('bg-emerald-500', 'bg-slate-400');
-                    btn.innerHTML = '<i class="fa-solid fa-check"></i> CONCLUÍDO';
-                    card.classList.add('opacity-60', 'pointer-events-none');
-                } else {
-                    throw new Error("Erro ao salvar componente");
-                }
-            } catch (error) {
-                alert("Falha ao salvar. Tente novamente.");
-                btn.disabled = false;
-                btn.innerText = 'Pronto p/ Montagem';
-            }
-        }
-
-        async function releaseOS() {
-            if (!selectedOS) return;
-
-            const payload = {
-                os_id: selectedOS.id,
-                action: "RELEASE_OS"
-            };
-
-            try {
-                const response = await fetch(API_ACTION, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (response.ok) {
-                    alert("OS Liberada com sucesso!");
-                    window.location.reload();
-                }
-            } catch (error) {
-                console.error(error);
-            }
-        }
-
-        // Modal Helpers
-        function openSpecialServiceModal() { document.getElementById('modal-special').classList.remove('hidden'); }
-        function closeSpecialServiceModal() { document.getElementById('modal-special').classList.add('hidden'); }
-		
-		// Novas funções para controlar o modal customizado
-        function closeRoutingModal() {
-            document.getElementById('modal-confirm-routing').classList.add('hidden');
-        }
-
         async function sendPieceTo(btn, componentName, targetSector) {
             if (!selectedOS) return;
 
@@ -387,7 +334,7 @@ function renderComponentCards() {
             confirmBtn.onclick = async () => {
                 modal.classList.add('hidden');
                 
-                const card = document.getElementById(`comp-card-${componentName}`);
+                const card = document.getElementById(`comp-card-${componentName.replace(/\s+/g, '-')}`);
                 const checkboxes = card.querySelectorAll('input[type="checkbox"]:checked');
                 const services = Array.from(checkboxes).map(cb => cb.dataset.item);
 
@@ -395,9 +342,8 @@ function renderComponentCards() {
                 const originalText = btn.innerText;
                 btn.innerText = 'ENVIANDO...';
 
-                // PAYLOAD oficial ajustado para os_id (vinda da View do banco)
                 const payload = {
-                    os_id: selectedOS.os_id,
+                    os_id: selectedOS.os_id || selectedOS.id,
                     component: componentName,
                     target: targetSector,
                     executed_services: services
@@ -429,22 +375,70 @@ function renderComponentCards() {
                 }
             };
         }
+
+        function closeRoutingModal() {
+            document.getElementById('modal-confirm-routing').classList.add('hidden');
+        }
+
+        // --- LÓGICA DO MODAL DE SERVIÇO ESPECIAL ---
+
+        function openSpecialServiceModal() { 
+            document.getElementById('special-item-name').value = ''; 
+            validateSpecialModal();
+            document.getElementById('modal-special').classList.remove('hidden'); 
+        }
+
+        function closeSpecialServiceModal() { 
+            document.getElementById('modal-special').classList.add('hidden'); 
+        }
+
+        function validateSpecialModal() {
+            const name = document.getElementById('special-item-name').value;
+            const btn = document.getElementById('btn-add-special');
+            if(name.length >= 3) {
+                btn.disabled = false;
+                btn.classList.replace('bg-blue-300', 'bg-blue-600');
+                btn.classList.remove('cursor-not-allowed');
+            } else {
+                btn.disabled = true;
+                btn.classList.replace('bg-blue-600', 'bg-blue-300');
+                btn.classList.add('cursor-not-allowed');
+            }
+        }
+
+        function toggleSpecialRadioStyle(type) {
+            const lp = document.getElementById('label-padrao');
+            const lr = document.getElementById('label-retrabalho');
+            const dotP = document.getElementById('radio-dot-padrao');
+            const dotR = document.getElementById('radio-dot-retrabalho');
+
+            if(type === 'PADRAO') {
+                document.querySelector('input[value="PADRAO"]').checked = true;
+                lp.className = "flex items-center p-4 border-2 rounded-2xl cursor-pointer transition-all border-blue-600 bg-blue-50/50";
+                lr.className = "flex items-center p-4 border-2 border-slate-100 rounded-2xl cursor-pointer transition-all hover:bg-slate-50";
+                dotP.classList.replace('bg-transparent', 'bg-blue-600');
+                dotR.classList.replace('bg-blue-600', 'bg-transparent');
+            } else {
+                document.querySelector('input[value="RETRABALHO"]').checked = true;
+                lr.className = "flex items-center p-4 border-2 rounded-2xl cursor-pointer transition-all border-red-500 bg-red-50/50";
+                lp.className = "flex items-center p-4 border-2 border-slate-100 rounded-2xl cursor-pointer transition-all hover:bg-slate-50";
+                dotR.classList.replace('bg-transparent', 'bg-blue-600');
+                dotP.classList.replace('bg-blue-600', 'bg-transparent');
+            }
+        }
+
+        function addSpecialCard() {
+            const name = document.getElementById('special-item-name').value.toUpperCase();
+            const type = document.querySelector('input[name="special-type"]:checked').value;
+            
+            specialItemsList.push({
+                title: name,
+                type: type
+            });
+
+            closeSpecialServiceModal();
+            renderComponentCards();
+        }
     </script>
-	
-	<!-- MODAL DE CONFIRMAÇÃO DE ROTEAMENTO (CUSTOM) -->
-    <div id="modal-confirm-routing" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] flex items-center justify-center hidden p-4">
-        <div class="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl text-center border-t-8 border-turbo-teal">
-            <div class="w-20 h-20 bg-teal-50 text-turbo-teal rounded-full flex items-center justify-center mx-auto mb-4">
-                <i class="fa-solid fa-paper-plane text-3xl"></i>
-            </div>
-            <h4 class="text-xl font-black text-slate-800 mb-2 uppercase italic">Encaminhar Peça?</h4>
-            <p id="routing-confirm-msg" class="text-slate-500 text-sm mb-6 font-medium">Você está prestes a enviar este item para outro setor. Esta ação é definitiva.</p>
-            <div class="flex gap-3">
-                <button onclick="closeRoutingModal()" class="flex-1 bg-slate-100 text-slate-600 font-bold py-3 rounded-xl hover:bg-slate-200 transition uppercase text-xs tracking-widest">Cancelar</button>
-                <button id="btn-confirm-routing-final" class="flex-1 bg-turbo-teal text-white font-bold py-3 rounded-xl hover:bg-teal-700 transition shadow-lg shadow-teal-100 uppercase text-xs tracking-widest">Sim, Enviar</button>
-            </div>
-        </div>
-    </div>
-	
 </body>
 </html>
