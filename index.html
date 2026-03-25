@@ -156,12 +156,12 @@
 
         // Estrutura de dados dos componentes
         const COMPONENT_STRUCTURE = {
+            CT: ["ANÁLISE", "ROSCAS", "ROSCAS POSTIÇAS", "FACEAMENTO PÉ/ MESA", "FACEAMENTO SAÍDA", "EMBUCHAMENTO", "SOB MEDIDA", "ABERTURA DE TRINCAS", "RETIRAR PRISIONEIROS", "REMOVER WASTEGATES", "MONTAR WASTEGATE", "FRESAMENTO DA MOEDA", "ACENTAMENTO DA CCE", "ADAPTAÇÃO DE BORDA", "EMBUCHAMENTO SAÍDA"],
+            CCO: ["ANÁLISE", "ROSCAS", "ROSCAS POSTIÇAS", "EMBUCHAMENTO", "SOB MEDIDA", "ABERTURA DE TRINCAS", "RETIRAR PARAFUSOS", "ADAPTAÇÃO ENCAIXE PRATO", "ADAPTAÇÃO BOCAL ADMISSÃO", "ADAPTAÇÃO BOCAL FILTRO", "BOCAL ADMISSÃO", "BOCAL FILTRO"],
+            COLETOR: ["ANÁLISE", "RETIRAR PRISIONEIROS", "ROSCAS", "ROSCAS POSTIÇAS", "FRESAMENTO", "ABERTURA DE TRINCAS", "FRESAMENTO DE COLETOR - FACE 1", "FRESAMENTO DE COLETOR - FACE 2", "FRESAMENTO FACE EGR"],
             CCE: ["ANÁLISE", "USINAR BORDA QUENTE", "USINAR BORDA FRIA", "LIXAR", "CONCENT.", "COLO MANCAL", "EMBUCHAR", "CANAL VITON", "STEPBOARD", "ADAPTAÇÃO", "ROSCAS", "TRANSFORMAÇÃO ROSCAS", "ROSCAS POSTIÇAS", "FRESAMENTO"],
-            CCO: ["ANÁLISE", "ROSCAS", "ROSCAS POSTIÇAS", "EMBUCHAMENTO", "SOB MEDIDA", "ABERTURA DE TRINCAS", "RETIRAR PARAFUSOS", "ADAPTAÇÃO ENCAIXE PRATO", "ADAPTAÇÃO BOCAL ADMISSÃO", "ADAPTAÇÃO BOCAL FILTRO"],
-            CT: ["FACEAMENTO PÉ/ MESA", "FACEAMENTO SAÍDA", "REMOVER WASTEGATES", "MONTAR WASTEGATE", "FRESAMENTO DA MOEDA", "ACENTAMENTO DA CCE", "ADAPTAÇÃO DE BORDA", "EMBUCHAMENTO SAÍDA"],
-            EIXO: ["ANÁLISE", "DESEMPENO", "ABERTURA CAVA", "USINAGEM", "ABERTURA ANEL", "RETIFICA", "ROSCA EIXO", "FACEAMENTO", "FURO CENTRO", "TRANSFORMAR", "POLIMENTO EIXO"],
-            ROTOR: ["ANÁLISE", "FACEAMENTO / PORCA", "TRANSFORMAÇÃO", "EMBUCHAMENTO ROTOR", "FACEAMENTO DE PALHETAS"],
-            COLETOR: ["ROSCAS", "ROSCAS POSTIÇAS", "FRESAMENTO", "ABERTURA DE TRINCAS", "FRESAMENTO DE COLETOR - FACE 1", "FRESAMENTO DE COLETOR - FACE 2", "FRESAMENTO FACE EGR"],
+            EIXO: ["ANÁLISE", "DESEMPENO", "ABERTURA CAVA", "USINAGEM", "ABERTURA ANEL", "RETIFICA", "ROSCA EIXO", "FACEAMENTO", "FURO CENTRO", "TRANSFORMAR", "DESEMPENO DE PALHETA", "TIRAR REBARBA EIXO", "POLIMENTO EIXO"],
+            ROTOR: ["ANÁLISE", "FACEAMENTO / PORCA", "TRANSFORMAÇÃO", "EMBUCHAMENTO ROTOR", "FACEAMENTO DE PALHETA"],
             REPAROS: ["FABRICAÇÃO MANCAL R.", "FABRICAÇÃO MANCAL A.", "PASSE EXTERNO M. RADIAL", "PASSE INTERNO M. RADIAL", "FACEAMENTO M. RADIAL", "PASSE NA FLANGE", "ADAPTAÇÃO DE FLANGE", "SOLDA PROT. TÉRMICO", "PRODUZIR PROT. TÉRMICO", "FABRICAÇÃO ESPAÇADOR R.", "FABRICAÇÃO COLAR", "CALÇO DE ALTURA"],
             GEOMETRIA: ["SERVIÇO GERAL RETÍFICA", "DESMONTAGEM/LIMPEZA", "CONFERÊNCIA"],
             ATUADOR: ["SERVIÇO GERAL RETÍFICA", "TESTE ELETRÔNICO", "TROCA DE ENGRENAGENS"],
@@ -241,58 +241,54 @@ function selectOS(os) {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        function renderComponentCards() {
+function renderComponentCards() {
             const grid = document.getElementById('components-grid');
-            grid.innerHTML = '';
+            if (!grid || !selectedOS) return;
 
-            // Lógica Unificada: Renderiza apenas os componentes enviados pelo backend para este setor
             const componentsToShow = selectedOS.components_to_render || [];
-
             if (componentsToShow.length === 0) {
-                grid.innerHTML = '<div class="col-span-full p-10 text-center text-slate-400 font-bold uppercase italic">Nenhum componente pendente nesta OS para Retífica.</div>';
+                grid.innerHTML = '<div class="col-span-full p-20 text-center"><p class="text-slate-400 font-black uppercase tracking-widest italic">Aguardando componentes serem liberados.</p></div>';
                 return;
             }
 
-            componentsToShow.forEach(name => {
-                const card = document.createElement('div');
-                card.className = "bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden transition-all duration-300";
-                card.id = `comp-card-${name}`;
+            grid.innerHTML = componentsToShow.map(name => {
+                const trk = (selectedOS.tracking || []).find(t => t.component === name);
+                const isSent = !!trk && trk.stage !== 'RETIFICA' && trk.stage !== 'Retífica';
                 
-                // Busca os itens do checklist na estrutura estática, ou mostra uma lista padrão caso não encontre
+                const cardStyle = isSent ? 'opacity-40 grayscale pointer-events-none' : '';
+                const badgeText = isSent ? `EM ${trk.stage.toUpperCase()}` : 'Retífica';
+                const badgeColor = isSent ? 'bg-slate-500' : 'bg-turbo-teal';
+
                 const checklistItems = COMPONENT_STRUCTURE[name] || ["SERVIÇO GERAL"];
 
-                card.innerHTML = `
-                    <div class="px-4 py-3 bg-slate-50 border-b flex justify-between items-center">
-                        <h4 class="font-black text-slate-800 text-sm italic">${name}</h4>
-                        <span class="text-[8px] font-black uppercase px-2 py-0.5 bg-turbo-blue text-white rounded-full">Retífica</span>
-                    </div>
-                    <div class="p-3 flex-grow flex flex-col">
-                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Checklist de Execução:</p>
-                        <div class="checklist-scroll max-h-40 overflow-y-auto space-y-1 mb-4 pr-1">
-                            ${checklistItems.map(item => `
-                                <label class="flex items-center space-x-3 p-2 hover:bg-slate-50 rounded-lg cursor-pointer transition border border-transparent">
-                                    <input type="checkbox" class="w-4 h-4 rounded-md border-slate-300 text-turbo-teal focus:ring-turbo-teal" data-item="${item}">
-                                    <span class="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">${item}</span>
-                                </label>
-                            `).join('')}
+                const itemHtml = checklistItems.map(item => `
+                    <label class="flex items-center space-x-3 cursor-pointer group py-1.5">
+                        <input type="checkbox" ${isSent ? 'disabled' : ''} class="w-5 h-5 rounded border-slate-300 text-turbo-teal focus:ring-turbo-teal" data-item="${item}">
+                        <span class="text-xs font-bold text-slate-500 group-hover:text-slate-800 transition">${item}</span>
+                    </label>
+                `).join('');
+
+                return `
+                    <div class="bg-white rounded-3xl shadow-sm border-2 border-slate-100 flex flex-col p-6 ${cardStyle}" id="comp-card-${name.replace(/\s+/g, '-')}">
+                        <div class="flex justify-between items-center mb-6">
+                            <h4 class="text-2xl font-black text-slate-800 tracking-tighter uppercase italic">${name}</h4>
+                            <span class="text-[10px] font-black uppercase px-4 py-1.5 ${badgeColor} text-white rounded-full tracking-widest">${badgeText}</span>
                         </div>
-                        
-                        <div class="mt-auto space-y-3">
-                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Encaminhar Para:</p>
+                        <div class="flex-1 flex flex-col">
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">CHECKLIST DE EXECUÇÃO (RETÍFICA):</p>
+                            <div class="checklist-scroll overflow-y-auto max-h-[200px] space-y-1 mb-8 pr-1">${itemHtml}</div>
+                            <hr class="border-slate-100 mb-6">
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">ENCAMINHAR PARA:</p>
                             <div class="grid grid-cols-2 gap-2">
-                                <button class="py-2 border bg-turbo-teal text-white text-[9px] font-black uppercase rounded-lg cursor-default">Retífica</button>
-                                <button onclick="sendPieceTo(this, '${name}', 'SOLDA')" class="py-2 border border-slate-200 bg-slate-50 text-[9px] font-black uppercase rounded-lg hover:bg-turbo-teal hover:text-white transition">Solda</button>
-                                <button onclick="sendPieceTo(this, '${name}', 'METROLOGIA')" class="py-2 border border-slate-200 bg-slate-50 text-[9px] font-black uppercase rounded-lg hover:bg-turbo-teal hover:text-white transition">Metrologia</button>
-                                <button onclick="sendPieceTo(this, '${name}', 'BANCADA')" class="py-2 border border-slate-200 bg-slate-50 text-[9px] font-black uppercase rounded-lg hover:bg-turbo-teal hover:text-white transition">Bancada</button>
+                                <button class="py-3 bg-turbo-teal text-white text-[10px] font-black uppercase rounded-lg cursor-default shadow-md">Retífica</button>
+                                <button onclick="sendPieceTo(this, '${name}', 'SOLDA')" class="py-3 bg-slate-50 text-slate-700 text-[10px] font-black uppercase rounded-lg hover:bg-slate-100 transition">Solda</button>
+                                <button onclick="sendPieceTo(this, '${name}', 'METROLOGIA')" class="py-3 bg-slate-50 text-slate-700 text-[10px] font-black uppercase rounded-lg hover:bg-slate-100 transition">Metrologia</button>
+                                <button onclick="sendPieceTo(this, '${name}', 'BANCADA')" class="py-3 bg-slate-50 text-slate-700 text-[10px] font-black uppercase rounded-lg hover:bg-slate-100 transition">Bancada</button>
+                                <button onclick="sendPieceTo(this, '${name}', 'MONTAGEM')" class="col-span-2 py-4 bg-emerald-600 text-white text-[11px] font-black uppercase rounded-xl transition hover:bg-emerald-700 shadow-lg shadow-emerald-100 mt-2">Pronto p/ Montagem</button>
                             </div>
-                            <button onclick="sendPieceTo(this, '${name}', 'MONTAGEM')" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-lg shadow-emerald-100">
-                                Pronto p/ Montagem
-                            </button>
                         </div>
-                    </div>
-                `;
-                grid.appendChild(card);
-            });
+                    </div>`;
+            }).join('');
         }
 
         function toggleRoute(btn) {
