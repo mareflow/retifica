@@ -90,7 +90,7 @@
                         <button onclick="openSpecialServiceModal()" class="bg-white/20 hover:bg-white/30 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg uppercase tracking-wider transition">
                             + Adicionar Serviço Especial
                         </button>
-                        <button onclick="carregarLinhaDoTempo(selectedOS.id)" class="bg-white/20 hover:bg-white/30 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg uppercase tracking-wider transition">
+                        <button onclick="carregarLinhaDoTempo()" class="bg-white/20 hover:bg-white/30 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg uppercase tracking-wider transition">
                             <i class="fa-solid fa-clock-rotate-left mr-1"></i> Histórico OS
                         </button>
                     </div>
@@ -479,42 +479,67 @@ function openSpecialServiceModal() {
             renderComponentCards();
         }
 		
-		// FUNÇÃO PARA BUSCAR E RENDERIZAR O HISTÓRICO
-        async function carregarLinhaDoTempo(osId) {
-            if (!osId) return;
-            const os = selectedOS;
-            
-            document.getElementById('detail-business-id').textContent = os.business_id;
-            document.getElementById('detail-model').textContent = os.model;
-            
-            const extras = typeof os.maintenance_extras === 'string' ? JSON.parse(os.maintenance_extras) : os.maintenance_extras;
-            document.getElementById('detail-maintenance-extras').innerHTML = formatMaintenanceExtras(extras);
+// FUNÇÃO DE HISTÓRICO REVISADA E BLINDADA
+        async function carregarLinhaDoTempo() {
+            // Verifica se existe uma OS selecionada
+            if (!selectedOS) {
+                alert("Selecione uma OS primeiro.");
+                return;
+            }
 
-            const timeline = document.getElementById('timeline-container');
-            timeline.innerHTML = '<p class="text-xs text-slate-400 animate-pulse text-center">Buscando rastreio...</p>';
+            const os = selectedOS;
+            const osId = os.id;
             
-            document.getElementById('details-modal').classList.remove('hidden');
-            document.getElementById('details-modal').classList.add('flex');
+            // Preenche o cabeçalho do modal
+            document.getElementById('detail-business-id').textContent = os.business_id || '---';
+            document.getElementById('detail-model').textContent = os.model || '---';
+            
+            // Tratamento seguro para Itens Adicionais (Checklist de entrada)
+            const listExtras = document.getElementById('detail-maintenance-extras');
+            try {
+                let extras = os.maintenance_extras;
+                if (typeof extras === 'string' && extras.startsWith('{')) {
+                    extras = JSON.parse(extras);
+                }
+                listExtras.innerHTML = formatMaintenanceExtras(extras);
+            } catch (e) {
+                listExtras.innerHTML = '<li>Erro ao carregar itens.</li>';
+            }
+
+            // Prepara a área da Timeline
+            const timeline = document.getElementById('timeline-container');
+            timeline.innerHTML = '<p class="text-xs text-slate-400 animate-pulse text-center py-4">Buscando rastreio no banco...</p>';
+            
+            // Abre o modal visualmente
+            const modal = document.getElementById('details-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
 
             try {
+                // Busca eventos na tabela de histórico do Supabase
                 const { data: events, error } = await supabaseClient
                     .from('history_events')
                     .select('*')
                     .eq('service_order_id', osId)
                     .order('timestamp', { ascending: true });
 
-                if (!error && events && events.length > 0) {
+                if (error) throw error;
+
+                if (events && events.length > 0) {
                     timeline.innerHTML = events.map(ev => `
-                        <div class="relative pb-3">
-                            <div class="absolute -left-[21px] top-1 w-3 h-3 bg-turbo-blue rounded-full border-2 border-white"></div>
-                            <p class="text-[11px] font-black text-slate-800 uppercase tracking-tight">${ev.action}</p>
-                            <p class="text-[10px] text-slate-500 font-medium">${new Date(ev.timestamp).toLocaleString('pt-BR')}</p>
-                            ${ev.details ? `<p class="text-[9px] text-slate-400 italic">"${ev.details}"</p>` : ''}
+                        <div class="relative pb-4 border-l-2 border-turbo-blue pl-4 ml-2">
+                            <div class="absolute -left-[9px] top-1 w-4 h-4 bg-turbo-blue rounded-full border-2 border-white shadow-sm"></div>
+                            <p class="text-[11px] font-black text-slate-800 uppercase tracking-tight leading-none">${ev.action}</p>
+                            <p class="text-[10px] text-slate-500 font-medium mt-1">${new Date(ev.timestamp).toLocaleString('pt-BR')}</p>
+                            ${ev.details ? `<p class="text-[9px] text-turbo-blue italic mt-1 font-semibold">"${ev.details}"</p>` : ''}
                         </div>`).join('');
                 } else { 
-                    timeline.innerHTML = '<p class="text-xs text-slate-400 italic text-center">Nenhum evento registrado ainda.</p>'; 
+                    timeline.innerHTML = '<div class="py-6 text-center"><i class="fa-solid fa-circle-info text-slate-300 mb-2 text-xl"></i><p class="text-[10px] text-slate-400 italic uppercase">Iniciando rastreio para esta OS...</p></div>'; 
                 }
-            } catch (err) { console.error(err); }
+            } catch (err) { 
+                console.error("Erro Supabase:", err);
+                timeline.innerHTML = '<p class="text-xs text-red-500 text-center py-4 italic font-bold uppercase">Falha na conexão com o histórico.</p>';
+            }
         }
 
         // FORMATADOR DE ITENS ADICIONAIS
