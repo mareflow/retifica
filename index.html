@@ -537,14 +537,14 @@ function openSpecialServiceModal() {
 		
 // FUNÇÃO DE HISTÓRICO REVISADA E BLINDADA
         async function carregarLinhaDoTempo() {
-            // Verifica se existe uma OS selecionada
             if (!selectedOS) {
                 alert("Selecione uma OS primeiro.");
                 return;
             }
 
             const os = selectedOS;
-            const osId = os.id;
+            // CORREÇÃO: Prioriza o service_order_id (UUID) para o histórico funcionar
+            const osId = os.service_order_id || os.id;
             
             // Preenche o cabeçalho do modal
             document.getElementById('detail-business-id').textContent = os.business_id || '---';
