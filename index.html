@@ -286,8 +286,6 @@
             if (!grid || !selectedOS) return;
 
             const baseComponents = selectedOS.components_to_render || [];
-            
-            // Une componentes originais com os especiais adicionados manualmente
             const allComponents = [
                 ...baseComponents.map(name => ({ name, isSpecial: false })),
                 ...specialItemsList.map(item => ({ name: item.title, isSpecial: true, type: item.type }))
@@ -300,19 +298,24 @@
 
             grid.innerHTML = allComponents.map(comp => {
                 const name = comp.name;
-                // Procura no rastreio (ajustado para aceitar tanto .component quanto .component_name)
                 const trk = (selectedOS.tracking || []).find(t => (t.component === name || t.component_name === name));
                 
                 const statusPeca = trk?.status || 'Aguardando';
-                // Pega o estágio (setor) atual da peça com segurança
                 const setorAtual = trk?.current_stage || trk?.stage || '';
                 
+                // Regras de Estado
                 const isSent = !!trk && setorAtual !== 'RETIFICA' && setorAtual !== 'Retífica' && setorAtual !== '';
                 const isEmExecucao = statusPeca === 'Em Execução';
+                const isFinalizado = statusPeca === 'Finalizado';
                 
                 const cardStyle = isSent ? 'opacity-40 grayscale pointer-events-none' : '';
-                const badgeText = isSent ? `EM ${setorAtual.toUpperCase()}` : (comp.isSpecial ? comp.type : 'Retífica');
-                const badgeColor = isSent ? 'bg-slate-500' : (comp.type === 'RETRABALHO' ? 'bg-red-600' : (isEmExecucao ? 'bg-orange-500' : 'bg-turbo-teal'));
+                
+                // Badge Dinâmico
+                let badgeText = isFinalizado ? 'PRONTO' : (isEmExecucao ? 'EXECUTANDO' : 'AGUARDANDO');
+                if (isSent) badgeText = `EM ${setorAtual.toUpperCase()}`;
+                
+                let badgeColor = isFinalizado ? 'bg-emerald-500' : (isEmExecucao ? 'bg-orange-500 animate-pulse' : 'bg-turbo-teal');
+                if (isSent) badgeColor = 'bg-slate-500';
 
                 const checklistItems = comp.isSpecial ? (comp.items || ["SERVIÇO GERAL"]) : (COMPONENT_STRUCTURE[name] || ["SERVIÇO GERAL"]);
 
@@ -327,11 +330,12 @@
                     <div class="bg-white rounded-3xl shadow-sm border-2 border-slate-100 flex flex-col p-6 ${cardStyle}" id="comp-card-${name.replace(/\s+/g, '-')}">
                         <div class="flex justify-between items-center mb-6">
                             <h4 class="text-2xl font-black text-slate-800 tracking-tighter uppercase italic">${name}</h4>
-                            <span class="text-[10px] font-black uppercase px-4 py-1.5 ${badgeColor} text-white rounded-full tracking-widest animate-pulse">${isEmExecucao ? 'EXECUTANDO' : badgeText}</span>
+                            <span class="text-[10px] font-black uppercase px-4 py-1.5 ${badgeColor} text-white rounded-full tracking-widest">${badgeText}</span>
                         </div>
                         <div class="flex-1 flex flex-col relative">
-                            <!-- BLOQUEIO VISUAL CASO NÃO TENHA INICIADO -->
-                            ${(!isEmExecucao && !isSent) ? `
+                            
+                            <!-- BLOQUEIO VISUAL: BOTÃO INICIAR -->
+                            ${(statusPeca === 'Aguardando' && !isSent) ? `
                                 <div class="absolute inset-0 z-10 bg-white/60 backdrop-blur-[2px] flex flex-col items-center justify-center text-center p-4">
                                     <i class="fa-solid fa-play text-turbo-teal text-4xl mb-4"></i>
                                     <button onclick="iniciarServicoPeca('${name}')" class="bg-turbo-teal text-white font-black px-6 py-3 rounded-xl uppercase text-xs tracking-widest shadow-xl hover:scale-105 transition">Iniciar Serviço</button>
@@ -340,14 +344,22 @@
 
                             <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">CHECKLIST DE EXECUÇÃO (RETÍFICA):</p>
                             <div class="checklist-scroll overflow-y-auto max-h-[200px] space-y-1 mb-8 pr-1">${itemHtml}</div>
+                            
+                            <!-- BOTÃO FINALIZAR (SÓ APARECE EM EXECUÇÃO) -->
+                            ${isEmExecucao ? `
+                                <button onclick="finalizarServicoPeca('${name}')" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-4 rounded-2xl uppercase text-xs tracking-widest shadow-lg mb-6 transition-all transform hover:scale-105">
+                                    <i class="fa-solid fa-check-double mr-2"></i> Finalizar Execução
+                                </button>
+                            ` : ''}
+
                             <hr class="border-slate-100 mb-6">
                             <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">ENCAMINHAR PARA:</p>
                             <div class="grid grid-cols-2 gap-2">
                                 <button class="py-3 bg-turbo-teal text-white text-[10px] font-black uppercase rounded-lg cursor-default shadow-md">Retífica</button>
-                                <button onclick="sendPieceTo(this, '${name}', 'SOLDA')" ${!isEmExecucao ? 'disabled' : ''} class="py-3 bg-slate-50 text-slate-700 text-[10px] font-black uppercase rounded-lg hover:bg-slate-100 transition disabled:opacity-30">Solda</button>
-                                <button onclick="sendPieceTo(this, '${name}', 'METROLOGIA')" ${!isEmExecucao ? 'disabled' : ''} class="py-3 bg-slate-50 text-slate-700 text-[10px] font-black uppercase rounded-lg hover:bg-slate-100 transition disabled:opacity-30">Metrologia</button>
-                                <button onclick="sendPieceTo(this, '${name}', 'BANCADA')" ${!isEmExecucao ? 'disabled' : ''} class="py-3 bg-slate-50 text-slate-700 text-[10px] font-black uppercase rounded-lg hover:bg-slate-100 transition disabled:opacity-30">Bancada</button>
-                                <button onclick="sendPieceTo(this, '${name}', 'MONTAGEM')" ${!isEmExecucao ? 'disabled' : ''} class="col-span-2 py-4 bg-emerald-600 text-white text-[11px] font-black uppercase rounded-xl transition hover:bg-emerald-700 shadow-lg shadow-emerald-100 mt-2 disabled:opacity-30">Pronto p/ Montagem</button>
+                                <button onclick="sendPieceTo(this, '${name}', 'SOLDA')" ${!isFinalizado ? 'disabled' : ''} class="py-3 bg-slate-50 text-slate-700 text-[10px] font-black uppercase rounded-lg hover:bg-slate-100 transition disabled:opacity-30">Solda</button>
+                                <button onclick="sendPieceTo(this, '${name}', 'METROLOGIA')" ${!isFinalizado ? 'disabled' : ''} class="py-3 bg-slate-50 text-slate-700 text-[10px] font-black uppercase rounded-lg hover:bg-slate-100 transition disabled:opacity-30">Metrologia</button>
+                                <button onclick="sendPieceTo(this, '${name}', 'BANCADA')" ${!isFinalizado ? 'disabled' : ''} class="py-3 bg-slate-50 text-slate-700 text-[10px] font-black uppercase rounded-lg hover:bg-slate-100 transition disabled:opacity-30">Bancada</button>
+                                <button onclick="sendPieceTo(this, '${name}', 'MONTAGEM')" ${!isFinalizado ? 'disabled' : ''} class="col-span-2 py-4 bg-emerald-600 text-white text-[11px] font-black uppercase rounded-xl transition hover:bg-emerald-700 shadow-lg shadow-emerald-100 mt-2 disabled:opacity-30">Pronto p/ Montagem</button>
                             </div>
                         </div>
                     </div>`;
@@ -497,42 +509,51 @@ function openSpecialServiceModal() {
         async function iniciarServicoPeca(componentName) {
             if (!selectedOS) return;
             const idParaEnviar = selectedOS.service_order_id || selectedOS.id || selectedOS.os_id;
-
             try {
                 const response = await fetch('https://webhook.mareflow.com.br/webhook/production/start-component-service', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ os_id: idParaEnviar, component_name: componentName })
                 });
+                if (response.ok) {
+                    if (!selectedOS.tracking) selectedOS.tracking = [];
+                    let trk = selectedOS.tracking.find(t => (t.component === componentName || t.component_name === componentName));
+                    if (trk) { trk.status = 'Em Execução'; trk.current_stage = 'RETIFICA'; }
+                    else { selectedOS.tracking.push({ component: componentName, component_name: componentName, status: 'Em Execução', current_stage: 'RETIFICA' }); }
+                    renderComponentCards();
+                }
+            } catch (error) { alert("Erro ao iniciar."); }
+        }
+
+        async function finalizarServicoPeca(componentName) {
+            if (!selectedOS) return;
+            const idParaEnviar = selectedOS.service_order_id || selectedOS.id || selectedOS.os_id;
+
+            try {
+                const response = await fetch('https://webhook.mareflow.com.br/webhook/production/finish-component-service', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ os_id: idParaEnviar, component_name: componentName })
+                });
+
+                const resumo = await response.json();
 
                 if (response.ok) {
-                    // GARANTIA: Se a lista de tracking não existir na memória, cria ela agora
-                    if (!selectedOS.tracking) selectedOS.tracking = [];
+                    let trk = selectedOS.tracking.find(t => (t.component === componentName || t.component_name === componentName));
+                    if (trk) trk.status = 'Finalizado';
 
-                    // Procura a peça na lista
-                    let pecaNoTracking = selectedOS.tracking.find(t => (t.component === componentName || t.component_name === componentName));
+                    // Preenche o Modal de Resumo
+                    document.getElementById('resumo-peca-nome').innerText = componentName;
+                    document.getElementById('resumo-inicio').innerText = resumo.start_time;
+                    document.getElementById('resumo-fim').innerText = resumo.end_time;
+                    document.getElementById('resumo-duracao').innerText = resumo.duration;
                     
-                    if (pecaNoTracking) {
-                        pecaNoTracking.status = 'Em Execução';
-                        pecaNoTracking.current_stage = 'RETIFICA';
-                    } else {
-                        selectedOS.tracking.push({ 
-                            component: componentName, 
-                            component_name: componentName, 
-                            status: 'Em Execução',
-                            current_stage: 'RETIFICA' 
-                        });
-                    }
-                    
-                    // Redesenha os cards com o novo status 'Em Execução'
+                    document.getElementById('modal-resumo-tempo').classList.remove('hidden');
+                    document.getElementById('modal-resumo-tempo').classList.add('flex');
+
                     renderComponentCards();
-                } else {
-                    alert("O servidor respondeu com erro ao iniciar.");
                 }
-            } catch (error) {
-                console.error("Erro na requisição:", error);
-                alert("Falha de conexão ao iniciar serviço.");
-            }
+            } catch (error) { alert("Erro ao finalizar serviço."); }
         }
 		
 // FUNÇÃO DE HISTÓRICO REVISADA E BLINDADA
@@ -633,6 +654,36 @@ function openSpecialServiceModal() {
             <h4 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 text-center border-t pt-4">Linha do Tempo de Produção</h4>
             <div id="timeline-container" class="space-y-4 border-l-2 border-slate-200 ml-2 pl-4">
                 <!-- Histórico injetado aqui -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL RESUMO DE EXECUÇÃO (CRONÔMETRO) -->
+    <div id="modal-resumo-tempo" class="fixed inset-0 bg-slate-900/80 z-[200] flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden border-t-8 border-orange-500">
+            <div class="p-8 text-center">
+                <div class="w-20 h-20 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fa-solid fa-stopwatch text-3xl"></i>
+                </div>
+                <h3 class="text-xl font-black text-slate-800 uppercase tracking-tighter mb-2">Serviço Finalizado!</h3>
+                <p id="resumo-peca-nome" class="text-orange-600 font-bold uppercase text-sm mb-6">NOME DA PEÇA</p>
+                
+                <div class="grid grid-cols-2 gap-4 mb-8 bg-slate-50 p-4 rounded-2xl">
+                    <div class="text-left">
+                        <p class="text-[10px] font-black text-slate-400 uppercase">Início</p>
+                        <p id="resumo-inicio" class="font-bold text-slate-700">--:--</p>
+                    </div>
+                    <div class="text-left border-l pl-4">
+                        <p class="text-[10px] font-black text-slate-400 uppercase">Fim</p>
+                        <p id="resumo-fim" class="font-bold text-slate-700">--:--</p>
+                    </div>
+                    <div class="col-span-2 border-t pt-2 mt-2">
+                        <p class="text-[10px] font-black text-slate-400 uppercase">Tempo Total</p>
+                        <p id="resumo-duracao" class="text-2xl font-black text-orange-600">-- min</p>
+                    </div>
+                </div>
+
+                <button onclick="document.getElementById('modal-resumo-tempo').classList.add('hidden')" class="w-full bg-slate-800 text-white font-black py-4 rounded-2xl uppercase text-xs tracking-widest hover:bg-black transition shadow-lg">OK, Continuar</button>
             </div>
         </div>
     </div>
