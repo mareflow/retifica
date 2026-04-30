@@ -519,14 +519,39 @@ function openSpecialServiceModal() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ os_id: idParaEnviar, component_name: componentName })
                 });
+
                 if (response.ok) {
+                    const data = await response.json();
+                    const startTime = data.rework_start_time || new Date().toISOString();
+
+                    // GARANTIA: Atualiza tanto 'tracking' quanto 'full_tracking' na memória
                     if (!selectedOS.tracking) selectedOS.tracking = [];
-                    let trk = selectedOS.tracking.find(t => (t.component === componentName || t.component_name === componentName));
-                    if (trk) { trk.status = 'Em Execução'; trk.current_stage = 'RETIFICA'; }
-                    else { selectedOS.tracking.push({ component: componentName, component_name: componentName, status: 'Em Execução', current_stage: 'RETIFICA' }); }
+                    if (!selectedOS.full_tracking) selectedOS.full_tracking = [];
+
+                    [selectedOS.tracking, selectedOS.full_tracking].forEach(lista => {
+                        let peca = lista.find(t => (t.component === componentName || t.component_name === componentName));
+                        if (peca) {
+                            peca.status = 'Em Execução';
+                            peca.rework_start_time = startTime;
+                            peca.current_stage = 'RETIFICA';
+                        } else {
+                            lista.push({
+                                component: componentName,
+                                component_name: componentName,
+                                status: 'Em Execução',
+                                rework_start_time: startTime,
+                                current_stage: 'RETIFICA'
+                            });
+                        }
+                    });
+
+                    console.log("✅ Memória atualizada. Redesenhando cards...");
                     renderComponentCards();
                 }
-            } catch (error) { alert("Erro ao iniciar."); }
+            } catch (error) {
+                console.error(error);
+                alert("Erro ao iniciar serviço.");
+            }
         }
 
         async function finalizarServicoPeca(componentName) {
