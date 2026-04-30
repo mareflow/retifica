@@ -285,9 +285,11 @@
             const grid = document.getElementById('components-grid');
             if (!grid || !selectedOS) return;
 
-            const baseComponents = selectedOS.components_to_render || [];
+            // Remove nomes duplicados vindos do banco
+            const baseComponentsUnicos = [...new Set(selectedOS.components_to_render || [])];
+            
             const allComponents = [
-                ...baseComponents.map(name => ({ name, isSpecial: false })),
+                ...baseComponentsUnicos.map(name => ({ name, isSpecial: false })),
                 ...specialItemsList.map(item => ({ name: item.title, isSpecial: true, type: item.type }))
             ];
 
@@ -297,8 +299,10 @@
             }
 
             grid.innerHTML = allComponents.map(comp => {
-                const name = comp.name;
-                const trk = (selectedOS.tracking || []).find(t => (t.component === name || t.component_name === name));
+const name = comp.name;
+                // Busca nos dois lugares possíveis: no tracking vindo do banco ou no que acabamos de clicar
+                const trackingList = selectedOS.full_tracking || selectedOS.tracking || [];
+                const trk = trackingList.find(t => (t.component === name || t.component_name === name));
                 
                 const statusPeca = trk?.status || 'Aguardando';
                 const setorAtual = trk?.current_stage || trk?.stage || '';
