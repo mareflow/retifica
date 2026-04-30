@@ -556,7 +556,7 @@ function openSpecialServiceModal() {
 
         async function finalizarServicoPeca(componentName) {
             if (!selectedOS) return;
-            const idParaEnviar = selectedOS.service_order_id || selectedOS.id || selectedOS.os_id;
+            const idParaEnviar = selectedOS.service_order_id || selectedOS.os_id || selectedOS.id;
 
             try {
                 const response = await fetch('https://webhook.mareflow.com.br/webhook/production/finish-component-service', {
@@ -565,13 +565,21 @@ function openSpecialServiceModal() {
                     body: JSON.stringify({ os_id: idParaEnviar, component_name: componentName })
                 });
 
-                const resumo = await response.json();
-
                 if (response.ok) {
-                    let trk = selectedOS.tracking.find(t => (t.component === componentName || t.component_name === componentName));
-                    if (trk) trk.status = 'Finalizado';
+                    const resumo = await response.json();
 
-                    // Preenche o Modal de Resumo
+                    // 1. ATUALIZA TODAS AS LISTAS DE MEMÓRIA (Tracking e Full Tracking)
+                    const listas = [selectedOS.tracking, selectedOS.full_tracking].filter(l => l !== undefined);
+                    
+                    listas.forEach(lista => {
+                        let peca = lista.find(t => (t.component === componentName || t.component_name === componentName));
+                        if (peca) {
+                            peca.status = 'Finalizado';
+                            peca.rework_start_time = null; // Remove a tag de "Em andamento"
+                        }
+                    });
+
+                    // 2. PREENCHE E ABRE O MODAL DE RESUMO
                     document.getElementById('resumo-peca-nome').innerText = componentName;
                     document.getElementById('resumo-inicio').innerText = resumo.start_time;
                     document.getElementById('resumo-fim').innerText = resumo.end_time;
@@ -580,9 +588,16 @@ function openSpecialServiceModal() {
                     document.getElementById('modal-resumo-tempo').classList.remove('hidden');
                     document.getElementById('modal-resumo-tempo').classList.add('flex');
 
+                    // 3. REDESENHA A TELA
+                    console.log("✅ Finalizado com sucesso. Atualizando visual...");
                     renderComponentCards();
+                } else {
+                    alert("Erro ao finalizar no servidor.");
                 }
-            } catch (error) { alert("Erro ao finalizar serviço."); }
+            } catch (error) {
+                console.error(error);
+                alert("Falha de conexão ao finalizar.");
+            }
         }
 		
 // FUNÇÃO DE HISTÓRICO REVISADA E BLINDADA
