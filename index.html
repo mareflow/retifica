@@ -492,10 +492,21 @@ function openSpecialServiceModal() {
         }
 
         async function iniciarServicoPeca(componentName) {
-            if (!selectedOS) return;
+            // Verificação de segurança: Se não tem OS selecionada, avisa o técnico
+            if (!selectedOS) {
+                alert("Erro: Nenhuma Ordem de Serviço selecionada!");
+                return;
+            }
             
-            // Pega o ID da OS selecionada (tenta os dois nomes possíveis)
-            const idParaEnviar = selectedOS.service_order_id || selectedOS.id;
+            // Tenta pegar o ID de todas as formas possíveis que seu banco usa
+            const idParaEnviar = selectedOS.service_order_id || selectedOS.id || selectedOS.os_id;
+
+            // DEBUG: Se o ID ainda for nulo, a gente mata o erro antes de enviar pro n8n
+            if (!idParaEnviar) {
+                console.error("Dados da OS selecionada:", selectedOS);
+                alert("Erro crítico: O ID desta OS não foi encontrado nos dados do sistema.");
+                return;
+            }
 
             try {
                 const response = await fetch('https://webhook.mareflow.com.br/webhook/production/start-component-service', {
