@@ -300,15 +300,18 @@
 
             grid.innerHTML = allComponents.map(comp => {
                 const name = comp.name;
-                const trk = (selectedOS.tracking || []).find(t => t.component === name);
+                // Procura no rastreio (ajustado para aceitar tanto .component quanto .component_name)
+                const trk = (selectedOS.tracking || []).find(t => (t.component === name || t.component_name === name));
                 
-                // Estados: 'Aguardando', 'Em Execução', 'Finalizado'
                 const statusPeca = trk?.status || 'Aguardando';
-                const isSent = !!trk && trk.stage !== 'RETIFICA' && trk.stage !== 'Retífica';
+                // Pega o estágio (setor) atual da peça com segurança
+                const setorAtual = trk?.current_stage || trk?.stage || '';
+                
+                const isSent = !!trk && setorAtual !== 'RETIFICA' && setorAtual !== 'Retífica' && setorAtual !== '';
                 const isEmExecucao = statusPeca === 'Em Execução';
                 
                 const cardStyle = isSent ? 'opacity-40 grayscale pointer-events-none' : '';
-                const badgeText = isSent ? `EM ${trk.stage.toUpperCase()}` : (comp.isSpecial ? comp.type : 'Retífica');
+                const badgeText = isSent ? `EM ${setorAtual.toUpperCase()}` : (comp.isSpecial ? comp.type : 'Retífica');
                 const badgeColor = isSent ? 'bg-slate-500' : (comp.type === 'RETRABALHO' ? 'bg-red-600' : (isEmExecucao ? 'bg-orange-500' : 'bg-turbo-teal'));
 
                 const checklistItems = comp.isSpecial ? (comp.items || ["SERVIÇO GERAL"]) : (COMPONENT_STRUCTURE[name] || ["SERVIÇO GERAL"]);
@@ -511,8 +514,8 @@ function openSpecialServiceModal() {
                     
                     if (pecaNoTracking) {
                         pecaNoTracking.status = 'Em Execução';
+                        pecaNoTracking.current_stage = 'RETIFICA';
                     } else {
-                        // Se a peça não estava na lista (comum em peças novas), adiciona ela
                         selectedOS.tracking.push({ 
                             component: componentName, 
                             component_name: componentName, 
