@@ -301,17 +301,21 @@
             grid.innerHTML = allComponents.map(comp => {
                 const name = comp.name;
                 const trk = (selectedOS.tracking || []).find(t => t.component === name);
+                
+                // Estados: 'Aguardando', 'Em Execução', 'Finalizado'
+                const statusPeca = trk?.status || 'Aguardando';
                 const isSent = !!trk && trk.stage !== 'RETIFICA' && trk.stage !== 'Retífica';
+                const isEmExecucao = statusPeca === 'Em Execução';
                 
                 const cardStyle = isSent ? 'opacity-40 grayscale pointer-events-none' : '';
                 const badgeText = isSent ? `EM ${trk.stage.toUpperCase()}` : (comp.isSpecial ? comp.type : 'Retífica');
-                const badgeColor = isSent ? 'bg-slate-500' : (comp.type === 'RETRABALHO' ? 'bg-red-600' : 'bg-turbo-teal');
+                const badgeColor = isSent ? 'bg-slate-500' : (comp.type === 'RETRABALHO' ? 'bg-red-600' : (isEmExecucao ? 'bg-orange-500' : 'bg-turbo-teal'));
 
                 const checklistItems = comp.isSpecial ? (comp.items || ["SERVIÇO GERAL"]) : (COMPONENT_STRUCTURE[name] || ["SERVIÇO GERAL"]);
 
                 const itemHtml = checklistItems.map(item => `
                     <label class="flex items-center space-x-3 cursor-pointer group py-1.5">
-                        <input type="checkbox" ${isSent ? 'disabled' : ''} class="w-5 h-5 rounded border-slate-300 text-turbo-teal focus:ring-turbo-teal" data-item="${item}">
+                        <input type="checkbox" ${(!isEmExecucao || isSent) ? 'disabled' : ''} class="w-5 h-5 rounded border-slate-300 text-turbo-teal focus:ring-turbo-teal" data-item="${item}">
                         <span class="text-xs font-bold text-slate-500 group-hover:text-slate-800 transition">${item}</span>
                     </label>
                 `).join('');
@@ -320,19 +324,27 @@
                     <div class="bg-white rounded-3xl shadow-sm border-2 border-slate-100 flex flex-col p-6 ${cardStyle}" id="comp-card-${name.replace(/\s+/g, '-')}">
                         <div class="flex justify-between items-center mb-6">
                             <h4 class="text-2xl font-black text-slate-800 tracking-tighter uppercase italic">${name}</h4>
-                            <span class="text-[10px] font-black uppercase px-4 py-1.5 ${badgeColor} text-white rounded-full tracking-widest">${badgeText}</span>
+                            <span class="text-[10px] font-black uppercase px-4 py-1.5 ${badgeColor} text-white rounded-full tracking-widest animate-pulse">${isEmExecucao ? 'EXECUTANDO' : badgeText}</span>
                         </div>
-                        <div class="flex-1 flex flex-col">
+                        <div class="flex-1 flex flex-col relative">
+                            <!-- BLOQUEIO VISUAL CASO NÃO TENHA INICIADO -->
+                            ${(!isEmExecucao && !isSent) ? `
+                                <div class="absolute inset-0 z-10 bg-white/60 backdrop-blur-[2px] flex flex-col items-center justify-center text-center p-4">
+                                    <i class="fa-solid fa-play text-turbo-teal text-4xl mb-4"></i>
+                                    <button onclick="iniciarServicoPeca('${name}')" class="bg-turbo-teal text-white font-black px-6 py-3 rounded-xl uppercase text-xs tracking-widest shadow-xl hover:scale-105 transition">Iniciar Serviço</button>
+                                </div>
+                            ` : ''}
+
                             <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">CHECKLIST DE EXECUÇÃO (RETÍFICA):</p>
                             <div class="checklist-scroll overflow-y-auto max-h-[200px] space-y-1 mb-8 pr-1">${itemHtml}</div>
                             <hr class="border-slate-100 mb-6">
                             <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">ENCAMINHAR PARA:</p>
                             <div class="grid grid-cols-2 gap-2">
                                 <button class="py-3 bg-turbo-teal text-white text-[10px] font-black uppercase rounded-lg cursor-default shadow-md">Retífica</button>
-                                <button onclick="sendPieceTo(this, '${name}', 'SOLDA')" class="py-3 bg-slate-50 text-slate-700 text-[10px] font-black uppercase rounded-lg hover:bg-slate-100 transition">Solda</button>
-                                <button onclick="sendPieceTo(this, '${name}', 'METROLOGIA')" class="py-3 bg-slate-50 text-slate-700 text-[10px] font-black uppercase rounded-lg hover:bg-slate-100 transition">Metrologia</button>
-                                <button onclick="sendPieceTo(this, '${name}', 'BANCADA')" class="py-3 bg-slate-50 text-slate-700 text-[10px] font-black uppercase rounded-lg hover:bg-slate-100 transition">Bancada</button>
-                                <button onclick="sendPieceTo(this, '${name}', 'MONTAGEM')" class="col-span-2 py-4 bg-emerald-600 text-white text-[11px] font-black uppercase rounded-xl transition hover:bg-emerald-700 shadow-lg shadow-emerald-100 mt-2">Pronto p/ Montagem</button>
+                                <button onclick="sendPieceTo(this, '${name}', 'SOLDA')" ${!isEmExecucao ? 'disabled' : ''} class="py-3 bg-slate-50 text-slate-700 text-[10px] font-black uppercase rounded-lg hover:bg-slate-100 transition disabled:opacity-30">Solda</button>
+                                <button onclick="sendPieceTo(this, '${name}', 'METROLOGIA')" ${!isEmExecucao ? 'disabled' : ''} class="py-3 bg-slate-50 text-slate-700 text-[10px] font-black uppercase rounded-lg hover:bg-slate-100 transition disabled:opacity-30">Metrologia</button>
+                                <button onclick="sendPieceTo(this, '${name}', 'BANCADA')" ${!isEmExecucao ? 'disabled' : ''} class="py-3 bg-slate-50 text-slate-700 text-[10px] font-black uppercase rounded-lg hover:bg-slate-100 transition disabled:opacity-30">Bancada</button>
+                                <button onclick="sendPieceTo(this, '${name}', 'MONTAGEM')" ${!isEmExecucao ? 'disabled' : ''} class="col-span-2 py-4 bg-emerald-600 text-white text-[11px] font-black uppercase rounded-xl transition hover:bg-emerald-700 shadow-lg shadow-emerald-100 mt-2 disabled:opacity-30">Pronto p/ Montagem</button>
                             </div>
                         </div>
                     </div>`;
@@ -477,6 +489,34 @@ function openSpecialServiceModal() {
 
             closeSpecialServiceModal();
             renderComponentCards();
+        }
+
+        async function iniciarServicoPeca(componentName) {
+            if (!selectedOS) return;
+            
+            try {
+                const response = await fetch('https://webhook.mareflow.com.br/webhook/production/start-component-service', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        os_id: selectedOS.id,
+                        component_name: componentName
+                    })
+                });
+
+                if (response.ok) {
+                    // Atualiza localmente para mudar o visual sem recarregar tudo
+                    const trk = selectedOS.tracking.find(t => t.component === componentName);
+                    if (trk) {
+                        trk.status = 'Em Execução';
+                    } else {
+                        selectedOS.tracking.push({ component: componentName, status: 'Em Execução' });
+                    }
+                    renderComponentCards();
+                }
+            } catch (error) {
+                alert("Erro ao iniciar serviço.");
+            }
         }
 		
 // FUNÇÃO DE HISTÓRICO REVISADA E BLINDADA
